@@ -27,6 +27,11 @@ jobs:
         run: |
           sh ./setup/mobile.sh
 
+      - name: Setup Lime Android Path
+        run: |
+          haxelib run lime setup android "${{ steps.setup-java.outputs.path }}" "${ANDROID_HOME}" "${ANDROID_NDK_LATEST_HOME}"
+        continue-on-error: true
+
       - name: Build APK
         run: haxelib run lime build android -final
 
