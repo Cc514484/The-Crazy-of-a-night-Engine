@@ -37,7 +37,7 @@ jobs:
         run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Setup Lime Android
-        run: yes | haxelib run lime setup android
+        run: haxelib run lime setup android -y
 
       - name: Build APK
         run: haxelib run lime build android -final
