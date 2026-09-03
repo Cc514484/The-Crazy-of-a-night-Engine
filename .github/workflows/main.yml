@@ -4,36 +4,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  BuildMobileCache:
-    name: Build Caches
-    runs-on: macos-15
-    permissions: write-all
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Cache
-        uses: actions/cache@v4
-        with:
-          path: /Signatures
-          key: P-Slice.1.0.mobile-cache
-
-      - name: Run Setup Script
-        run: sh ./setup/mobile.sh
-
   BuildAndroid:
     name: Build Android
-    needs: BuildMobileCache
     runs-on: ubuntu-24.04
     permissions: write-all
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Android NDK
-        uses: nndroid/setup-ndk@v1
-        with:
-          ndk-version: r21e
 
       - name: Setup Java JDK
         uses: actions/setup-java@v4
@@ -46,23 +23,9 @@ jobs:
         with:
           haxe-version: 4.3.4
 
-      - name: Install Libraries
+      - name: Install Libraries & Setup Mobile
         run: |
-          haxelib setup ~/haxelib
-          haxelib install lime
-          haxelib install openfl
-          haxelib install flixel
-          haxelib run lime setup flixel
-          haxelib run lime setup android
-          haxelib install flixel-tools
-          haxelib install flixel-ui
-          haxelib install flixel-addons
-          haxelib install tjson
-          haxelib install hxjsonast
-          haxelib git linc_luajit https://github.com
-          haxelib git hxDiscordRpc https://github.com
-          haxelib git hxvlc https://github.com
-          haxelib git funkin.vis https://github.com
+          sh ./setup/mobile.sh
 
       - name: Build APK
         run: haxelib run lime build android -final
