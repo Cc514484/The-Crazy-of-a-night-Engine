@@ -72,7 +72,7 @@
 	<define name="ATSC_SUPPORT" unless="web"/>
 
 	<!-- Enables special crash handler in case you don't trust your players to report issues properly-->
-	<!-- <define name="FIREBASE_CRASH_HANDLER" if="mobile"/> -->
+	<define name="FIREBASE_CRASH_HANDLER" if="mobile"/>
 
 	<!-- Displays a "Touch here to play" screen-->
 	<define name="TOUCH_HERE_TO_PLAY" if="TOUCH_CONTROLS_ALLOWED debug" />
