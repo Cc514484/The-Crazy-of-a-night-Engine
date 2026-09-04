@@ -1,16 +1,30 @@
 package mobile.states;
 
-import flixel.effects.FlxFlicker;
 import mikolka.vslice.freeplay.FreeplayState;
-import mikolka.vslice.ui.title.TitleState;
-import mikolka.funkin.custom.mobile.MobileScaleMode;
-import mobile.objects.GridButtons;
+import options.OptionsState;
 import flixel.FlxBasic;
-import mikolka.compatibility.VsliceOptions;
-import mobile.objects.grid.*;
+import flixel.FlxG;
+import flixel.FlxSprite;
+import flixel.group.FlxGroup.FlxTypedGroup;
+import flixel.effects.FlxFlicker;
+import flixel.tweens.FlxTween;
+import flixel.tweens.FlxEase;
+import mikolka.vslice.ui.title.TitleState; 
+import flixel.util.FlxColor;
+import flixel.text.FlxText;
+import flixel.FlxObject; 
+import flixel.addons.transition.FlxTransitionableState;
+import states.ArtGallery;
+import states.CharacterProfiles;
+import states.JukeboxState;
+import states.StoryMenuState;
+
 #if !LEGACY_PSYCH
 #if MODS_ALLOWED
 import states.ModsMenuState;
+import backend.Mods; 
+import backend.WeekData; 
+import backend.Highscore; 
 #end
 import states.AchievementsMenuState;
 import states.CreditsState;
@@ -19,137 +33,527 @@ import states.editors.MasterEditorMenu;
 import editors.MasterEditorMenu;
 #end
 
+import mikolka.compatibility.VsliceOptions;
+import lime.app.Application; 
+import flash.system.System;  
+
 @:access(mikolka.vslice.ui.MainMenuState)
-class MobileMenuState extends FlxBasic {
-    var selectedSomethin:Bool = false;
-    
+class MobileMenuState extends FlxBasic
+{
+	var optionShit:Array<String> = ['story_mode', 'freeplay', 'credits', 'options'];
+	var sideImageNames:Array<String> = ['me1', 'me2', 'me3', 'me4'];
+
+	public static var curSelected:Int = 0;
+	var selectedSomethin:Bool = false;
+	var menuItems:FlxTypedGroup<FlxSprite>;
+	var camFollow:FlxObject; 
 	
-    var host:MainMenuState;
-	var grid:GridButtons;
-    public function new(host:MainMenuState) {
-        super();
-        this.host = host;
-        host.add(this);
-		
-        grid = new GridButtons((MobileScaleMode.gameCutoutSize.x/4)+30, 20, 2,Math.floor((MobileScaleMode.gameCutoutSize.x/4)+750));
-		host.add(grid);
-		grid.onItemSelect.add(s ->{
-			FlxG.sound.play(Paths.sound('confirmMenu'));
-				FlxTransitionableState.skipNextTransIn = false;
-				FlxTransitionableState.skipNextTransOut = false;
-				selectedSomethin = true;
+	var sideImage:FlxSprite; 
+	var leftImage:FlxSprite;
+	var sideImageTween:FlxTween;
+	var itemTweens:Array<FlxTween> = [];
 
-				if (VsliceOptions.FLASHBANG)
-					FlxFlicker.flicker(host.magenta, 1.1, 0.15, false);
-		});
-		var storyBtn = grid.makeButton('story_mode', 0, () ->
-		{
-			FlxG.mouse.visible = false;
-			MusicBeatState.switchState(new StoryMenuState());
-		});
-		storyBtn.selectedOffset.set(10,15);
+	// ปุ่มพิเศษฝั่งขวา
+	var artButton:FlxSprite;
+	var artSelected:Bool = false;
+	var bottomLButton:FlxSprite;
+	var bottomLSelected:Bool = false;
+	var jukeboxButton:FlxSprite;
+	var jukeboxSelected:Bool = false;
+	var modsButton:FlxSprite;
+	var modsSelected:Bool = false;
+	
+	var host:MainMenuState;
 
-		grid.makeButton('freeplay', 0, () ->
-		{
-			FlxG.mouse.visible = false;
-			host.persistentDraw = true;
-			host.persistentUpdate = false;
-			// Freeplay has its own custom transition
-			FlxTransitionableState.skipNextTransIn = true;
-			FlxTransitionableState.skipNextTransOut = true;
+	public function new(host:MainMenuState) {
+		super();
+		this.host = host;
 
-			host.openSubState(new FreeplayState());
-			host.subStateOpened.addOnce(state ->
-			{
-				grid.revealButtons();
-				selectedSomethin = false;
-				grid.selectButton();
-			});
-			if(!host.controls.mobileC) host.subStateClosed.addOnce((x) ->{
-				FlxG.mouse.visible = true;
-			});
-		}).selectedOffset.set(10,20);
 		#if MODS_ALLOWED
-		grid.makeButton('mods', 0, () ->
-		{
-			FlxG.mouse.visible = false;
-			MusicBeatState.switchState(new ModsMenuState());
-		});
-		#end
-		#if ACHIEVEMENTS_ALLOWED
-		grid.makeButton('awards', 1, () ->
-		{
-			FlxG.mouse.visible = false;
-			MusicBeatState.switchState(new AchievementsMenuState());
-		}).selectedOffset.set(70,15);
-		#end
-
-		grid.makeButton('credits', 1, () ->
-		{
-			FlxG.mouse.visible = false;
-			MusicBeatState.switchState(new CreditsState());
-		}).selectedOffset.set(150,10);
-
-		#if !switch
-		var donateBtn = new GridTileDonate(grid);
-		grid.addButton(donateBtn, 1);
-		donateBtn.selectedOffset.set(30,0);
-		#end
-
-		var optionsBtn = new OptionsButton(grid,() ->
-		{
-			FlxG.mouse.visible = false;
-            host.goToOptions();
-		});
-		grid.addButton(optionsBtn,0);
-		optionsBtn.setPosition((MobileScaleMode.gameCutoutSize.x/4)+35, FlxG.height - 200);
-
-        #if TOUCH_CONTROLS_ALLOWED
-		host.addTouchPad('NONE', 'B_C');
-		#end
-
-		if(!host.controls.mobileC) {
-			FlxG.mouse.visible = true;
-			grid.selectButton();
+		var hasTargetMod:Bool = false;
+		var modList:Array<String> = Mods.getModDirectories(); 
+		
+		for (mod in modList) {
+			if (mod == "The crazy of a night Revival Part 2") {
+				hasTargetMod = true;
+				break;
+			}
 		}
-    }
 
-    override function update(elapsed:Float) {
-        if (!selectedSomethin)
+		if (!hasTargetMod) {
+			if (lime.app.Application.current.window != null) {
+				lime.app.Application.current.window.alert(
+					"Not have a The Crazy of a night mod can't play idiot", 
+					"Mod Missing Error"
+				);
+			}
+			System.exit(0);
+			return; 
+		}
+		#end
+
+		host.add(this);
+
+		FlxG.mouse.visible = true; // เปิดใช้งาน Cursor/Touch direct บนจอมือถือ
+		host.bg.scrollFactor.set(0, 0);
+		host.bg.screenCenter();
+		host.bg.scale.set(1, 1); 
+
+		camFollow = new FlxObject(0, 0, 1, 1);
+		host.add(camFollow);
+		var scr:Float = (optionShit.length - 4) * 0.135;
+		if (optionShit.length < 6) scr = 0;
+
+		leftImage = new FlxSprite(-800, 0);
+		leftImage.loadGraphic(Paths.image('Menu/ihatewin11', 'shared'));
+		leftImage.antialiasing = VsliceOptions.ANTIALIASING;
+		leftImage.scrollFactor.set(0, scr);
+		leftImage.screenCenter(Y);
+		host.add(leftImage);
+		FlxTween.tween(leftImage, {x: 0}, 2.0, {ease: FlxEase.expoOut});
+
+		sideImage = new FlxSprite(FlxG.width + 500, 0);
+		sideImage.antialiasing = VsliceOptions.ANTIALIASING;
+		sideImage.scrollFactor.set(0, scr);
+		host.add(sideImage);
+
+		menuItems = new FlxTypedGroup<FlxSprite>();
+		host.add(menuItems);
+		for (i in 0...optionShit.length)
 		{
-			final controls = host.controls;
+			var offset:Float = 108 - (Math.max(optionShit.length, 4) - 4) * 80;
+			var menuItem:FlxSprite = new FlxSprite(-500, (i * 150) + offset);
+			menuItem.antialiasing = VsliceOptions.ANTIALIASING;
+			menuItem.frames = Paths.getSparrowAtlas('mainmenu/menu_' + optionShit[i]);
+			menuItem.animation.addByPrefix('idle', optionShit[i] + " basic", 24);
+			menuItem.animation.addByPrefix('selected', optionShit[i] + " white", 24);
+			menuItem.animation.play('idle');
+			menuItem.ID = i;
+			menuItems.add(menuItem);
+			menuItem.scrollFactor.set(0, scr);
+			menuItem.updateHitbox();
+			itemTweens.push(null);
+			FlxTween.tween(menuItem, {x: 100}, 1 + (i * 0.15), {ease: FlxEase.expoOut, startDelay: 0.1});
+		} 
 
-			if (controls.UI_UP_P)
-				grid.changeSelection(0, -1);
+		// ตั้งค่าปุ่ม Art Gallery (ลำดับที่ 4)
+		artButton = new FlxSprite(FlxG.width + 500, FlxG.height - 120); 
+		artButton.loadGraphic(Paths.image('Menu/bottom', 'shared'));
+		artButton.antialiasing = VsliceOptions.ANTIALIASING;
+		artButton.scale.set(0.5, 0.5);
+		artButton.scrollFactor.set();
+		artButton.updateHitbox(); 
+		host.add(artButton);
 
-			if (controls.UI_DOWN_P)
-				grid.changeSelection(0, 1);
-			if (controls.UI_LEFT_P)
-				grid.changeSelection(-1, 0);
+		var targetX:Float = FlxG.width - artButton.width - 20;
+		var targetArtY:Float = FlxG.height - artButton.height - 20;
+		FlxTween.tween(artButton, {x: targetX, y: targetArtY}, 1.2, {ease: FlxEase.expoOut, startDelay: 0.7});
 
-			if (controls.UI_RIGHT_P)
-				grid.changeSelection(1, 0);
+		// ตั้งค่าปุ่ม Character Profiles (ลำดับที่ 3)
+		bottomLButton = new FlxSprite(FlxG.width + 500, targetArtY - 100); 
+		bottomLButton.loadGraphic(Paths.image('Menu/bottomL', 'shared'));
+		bottomLButton.antialiasing = VsliceOptions.ANTIALIASING;
+		bottomLButton.scale.set(0.5, 0.5);
+		bottomLButton.scrollFactor.set();
+		bottomLButton.updateHitbox();
+		host.add(bottomLButton);
 
-			if (controls.BACK)
+		var targetBottomLY:Float = targetArtY - bottomLButton.height - 10;
+		FlxTween.tween(bottomLButton, {x: targetX, y: targetBottomLY}, 1.2, {ease: FlxEase.expoOut, startDelay: 0.6});
+
+		// ตั้งค่าปุ่ม Jukebox (ลำดับที่ 2)
+		jukeboxButton = new FlxSprite(FlxG.width + 500, targetBottomLY - 100);
+		jukeboxButton.loadGraphic(Paths.image('Menu/Jukebox', 'shared')); 
+		jukeboxButton.antialiasing = VsliceOptions.ANTIALIASING;
+		jukeboxButton.scale.set(0.5, 0.5);
+		jukeboxButton.scrollFactor.set();
+		jukeboxButton.updateHitbox();
+		host.add(jukeboxButton);
+
+		var targetJukeboxY:Float = targetBottomLY - jukeboxButton.height - 10;
+		FlxTween.tween(jukeboxButton, {x: targetX, y: targetJukeboxY}, 1.2, {ease: FlxEase.expoOut, startDelay: 0.5});
+
+		// ตั้งค่าปุ่ม Mods (ลำดับที่ 1)
+		modsButton = new FlxSprite(FlxG.width + 500, targetJukeboxY - 100);
+		modsButton.loadGraphic(Paths.image('Menu/modpl', 'shared')); 
+		modsButton.antialiasing = VsliceOptions.ANTIALIASING;
+		modsButton.scale.set(0.5, 0.5);
+		modsButton.scrollFactor.set();
+		modsButton.updateHitbox();
+		host.add(modsButton);
+
+		var targetModsY:Float = targetJukeboxY - modsButton.height - 10;
+		FlxTween.tween(modsButton, {x: targetX, y: targetModsY}, 1.2, {ease: FlxEase.expoOut, startDelay: 0.4});
+
+		#if MODS_ALLOWED
+		if (!checkAllVisibleWeeksCleared()) {
+			modsButton.color = 0xFF777777; 
+		}
+		#end
+
+		// ตัวหนังสือเวอร์ชัน
+		var fnfVer:FlxText = new FlxText(-500, FlxG.height - 18, FlxG.width, 'v${MainMenuState.funkinVersion} (Powered by MOW Engine ${MainMenuState.MowVersion})', 12);
+		var mowVer:FlxText = new FlxText(-500, 700 - 18, FlxG.width, "The Crazy Engine " + MainMenuState.CrVersion, 12);
+		var psychVer:FlxText = new FlxText(FlxG.width + 500, FlxG.height - 18, FlxG.width, "Psych Engine " + MainMenuState.psychEngineVersion, 12);
+		var crazyVer:FlxText = new FlxText(FlxG.width + 500, 700 - 18, FlxG.width, "The Crazy of a Night " + MainMenuState.crazyVersion, 12);
+		psychVer.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, RIGHT, OUTLINE, FlxColor.BLACK);
+		mowVer.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, OUTLINE, FlxColor.BLACK);
+		crazyVer.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, RIGHT, OUTLINE, FlxColor.BLACK);
+		fnfVer.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, LEFT, OUTLINE, FlxColor.BLACK);
+
+		for (text in [psychVer, fnfVer, mowVer, crazyVer]) {
+			text.scrollFactor.set();
+			host.add(text);
+		}
+
+		FlxTween.tween(fnfVer, {x: 0}, 1.2, {ease: FlxEase.expoOut, startDelay: 0.1});
+		FlxTween.tween(mowVer, {x: 0}, 1.2, {ease: FlxEase.expoOut, startDelay: 0.2});
+		FlxTween.tween(psychVer, {x: 0}, 1.2, {ease: FlxEase.expoOut, startDelay: 0.1});
+		FlxTween.tween(crazyVer, {x: 0}, 1.2, {ease: FlxEase.expoOut, startDelay: 0.2});
+
+		#if TOUCH_CONTROLS_ALLOWED
+		host.addTouchPad('UP_DOWN_LEFT_RIGHT', 'A_B_C');
+		#end
+
+		FlxG.camera.follow(camFollow, null, 0.06);
+		changeItem();
+	}
+
+	private function checkAllVisibleWeeksCleared():Bool
+	{
+		return true;
+	}
+
+	override function update(elapsed:Float)
+	{
+		if (!selectedSomethin)
+		{
+			// ตรวจจับการแตะปุ่มบนหน้าจอโดยตรง (Touch Direct Interaction)
+			handleTouchInput();
+
+			if (!artSelected && !bottomLSelected && !jukeboxSelected && !modsSelected) 
+			{
+				if (host.controls.UI_UP_P) changeItem(-1);
+				if (host.controls.UI_DOWN_P) changeItem(1);
+				if (host.controls.ACCEPT) selectItem();
+				if (host.controls.UI_RIGHT_P) {
+					modsSelected = true;
+					FlxG.sound.play(Paths.sound('scrollMenu'));
+					FlxTween.tween(modsButton.scale, {x: 0.6, y: 0.6}, 0.1, {ease: FlxEase.quadOut});
+					deselectMainItems();
+				}
+			}
+			else if (modsSelected) 
+			{
+				if (host.controls.ACCEPT) selectMods();
+				if (host.controls.UI_LEFT_P) {
+					modsSelected = false;
+					FlxG.sound.play(Paths.sound('scrollMenu'));
+					FlxTween.tween(modsButton.scale, {x: 0.5, y: 0.5}, 0.1, {ease: FlxEase.quadOut});
+					changeItem(0); 
+				}
+				if (host.controls.UI_DOWN_P) {
+					modsSelected = false;
+					jukeboxSelected = true;
+					FlxG.sound.play(Paths.sound('scrollMenu'));
+					FlxTween.tween(modsButton.scale, {x: 0.5, y: 0.5}, 0.1, {ease: FlxEase.quadOut});
+					FlxTween.tween(jukeboxButton.scale, {x: 0.6, y: 0.6}, 0.1, {ease: FlxEase.quadOut});
+				}
+			}
+			else if (jukeboxSelected) 
+			{
+				if (host.controls.ACCEPT) selectJukebox();
+				if (host.controls.UI_LEFT_P) {
+					jukeboxSelected = false;
+					FlxG.sound.play(Paths.sound('scrollMenu'));
+					FlxTween.tween(jukeboxButton.scale, {x: 0.5, y: 0.5}, 0.1, {ease: FlxEase.quadOut});
+					changeItem(0); 
+				}
+				if (host.controls.UI_UP_P) {
+					jukeboxSelected = false;
+					modsSelected = true;
+					FlxG.sound.play(Paths.sound('scrollMenu'));
+					FlxTween.tween(jukeboxButton.scale, {x: 0.5, y: 0.5}, 0.1, {ease: FlxEase.quadOut});
+					FlxTween.tween(modsButton.scale, {x: 0.6, y: 0.6}, 0.1, {ease: FlxEase.quadOut});
+				}
+				if (host.controls.UI_DOWN_P) {
+					jukeboxSelected = false;
+					bottomLSelected = true;
+					FlxG.sound.play(Paths.sound('scrollMenu'));
+					FlxTween.tween(jukeboxButton.scale, {x: 0.5, y: 0.5}, 0.1, {ease: FlxEase.quadOut});
+					FlxTween.tween(bottomLButton.scale, {x: 0.6, y: 0.6}, 0.1, {ease: FlxEase.quadOut});
+				}
+			}
+			else if (bottomLSelected) 
+			{
+				if (host.controls.ACCEPT) selectBottomL();
+				if (host.controls.UI_LEFT_P) {
+					bottomLSelected = false;
+					FlxG.sound.play(Paths.sound('scrollMenu'));
+					FlxTween.tween(bottomLButton.scale, {x: 0.5, y: 0.5}, 0.1, {ease: FlxEase.quadOut});
+					changeItem(0); 
+				}
+				if (host.controls.UI_UP_P) {
+					bottomLSelected = false;
+					jukeboxSelected = true;
+					FlxG.sound.play(Paths.sound('scrollMenu'));
+					FlxTween.tween(bottomLButton.scale, {x: 0.5, y: 0.5}, 0.1, {ease: FlxEase.quadOut});
+					FlxTween.tween(jukeboxButton.scale, {x: 0.6, y: 0.6}, 0.1, {ease: FlxEase.quadOut});
+				}
+				if (host.controls.UI_DOWN_P) {
+					bottomLSelected = false;
+					artSelected = true;
+					FlxG.sound.play(Paths.sound('scrollMenu'));
+					FlxTween.tween(bottomLButton.scale, {x: 0.5, y: 0.5}, 0.1, {ease: FlxEase.quadOut});
+					FlxTween.tween(artButton.scale, {x: 0.6, y: 0.6}, 0.1, {ease: FlxEase.quadOut});
+				}
+			}
+			else if (artSelected) 
+			{
+				if (host.controls.ACCEPT) selectArt();
+				if (host.controls.UI_LEFT_P) {
+					artSelected = false;
+					FlxG.sound.play(Paths.sound('scrollMenu'));
+					FlxTween.tween(artButton.scale, {x: 0.5, y: 0.5}, 0.1, {ease: FlxEase.quadOut});
+					changeItem(0); 
+				}
+				if (host.controls.UI_UP_P) {
+					artSelected = false;
+					bottomLSelected = true;
+					FlxG.sound.play(Paths.sound('scrollMenu'));
+					FlxTween.tween(artButton.scale, {x: 0.5, y: 0.5}, 0.1, {ease: FlxEase.quadOut});
+					FlxTween.tween(bottomLButton.scale, {x: 0.6, y: 0.6}, 0.1, {ease: FlxEase.quadOut});
+				}
+			}
+
+			if (host.controls.BACK)
 			{
 				selectedSomethin = true;
 				FlxG.sound.play(Paths.sound('cancelMenu'));
 				MusicBeatState.switchState(new TitleState());
 			}
-
-			if (controls.ACCEPT) {
-				selectedSomethin = true;
-				grid.confirmCurrentButton();
-			}
-			if (#if TOUCH_CONTROLS_ALLOWED host.touchPad.buttonC.justPressed || #end#if LEGACY_PSYCH FlxG.keys.anyJustPressed(ClientPrefs.keyBinds.get('debug_1')
-				.filter(s -> s != -1)) #else controls.justPressed('debug_1') #end)
+			
+			if (#if TOUCH_CONTROLS_ALLOWED host.touchPad.buttonC.justPressed || #end#if LEGACY_PSYCH FlxG.keys.anyJustPressed(ClientPrefs.keyBinds.get('debug_1').filter(s -> s != -1)) #else host.controls.justPressed('debug_1') #end)
 			{
 				selectedSomethin = true;
-				FlxTransitionableState.skipNextTransIn = false;
-				FlxTransitionableState.skipNextTransOut = false;
 				MusicBeatState.switchState(new MasterEditorMenu());
 			}
 		}
-        super.update(elapsed);
-    }
+		super.update(elapsed);
+	}
+
+	private function handleTouchInput():Void
+	{
+		for (i in 0...menuItems.members.length)
+		{
+			var item = menuItems.members[i];
+			if (FlxG.mouse.overlaps(item))
+			{
+				if (artSelected || bottomLSelected || jukeboxSelected || modsSelected) resetSideButtons();
+				if (curSelected != i) changeItem(i - curSelected);
+				if (FlxG.mouse.justPressed) selectItem();
+				return;
+			}
+		}
+
+		if (FlxG.mouse.overlaps(modsButton))
+		{
+			if (!modsSelected)
+			{
+				resetSideButtons();
+				modsSelected = true;
+				FlxG.sound.play(Paths.sound('scrollMenu'));
+				FlxTween.tween(modsButton.scale, {x: 0.6, y: 0.6}, 0.1, {ease: FlxEase.quadOut});
+				deselectMainItems();
+			}
+			if (FlxG.mouse.justPressed) selectMods();
+		}
+		else if (FlxG.mouse.overlaps(jukeboxButton))
+		{
+			if (!jukeboxSelected)
+			{
+				resetSideButtons();
+				jukeboxSelected = true;
+				FlxG.sound.play(Paths.sound('scrollMenu'));
+				FlxTween.tween(jukeboxButton.scale, {x: 0.6, y: 0.6}, 0.1, {ease: FlxEase.quadOut});
+				deselectMainItems();
+			}
+			if (FlxG.mouse.justPressed) selectJukebox();
+		}
+		else if (FlxG.mouse.overlaps(bottomLButton))
+		{
+			if (!bottomLSelected)
+			{
+				resetSideButtons();
+				bottomLSelected = true;
+				FlxG.sound.play(Paths.sound('scrollMenu'));
+				FlxTween.tween(bottomLButton.scale, {x: 0.6, y: 0.6}, 0.1, {ease: FlxEase.quadOut});
+				deselectMainItems();
+			}
+			if (FlxG.mouse.justPressed) selectBottomL();
+		}
+		else if (FlxG.mouse.overlaps(artButton))
+		{
+			if (!artSelected)
+			{
+				resetSideButtons();
+				artSelected = true;
+				FlxG.sound.play(Paths.sound('scrollMenu'));
+				FlxTween.tween(artButton.scale, {x: 0.6, y: 0.6}, 0.1, {ease: FlxEase.quadOut});
+				deselectMainItems();
+			}
+			if (FlxG.mouse.justPressed) selectArt();
+		}
+	}
+
+	private function resetSideButtons():Void
+	{
+		if (modsSelected) FlxTween.tween(modsButton.scale, {x: 0.5, y: 0.5}, 0.1, {ease: FlxEase.quadOut});
+		if (jukeboxSelected) FlxTween.tween(jukeboxButton.scale, {x: 0.5, y: 0.5}, 0.1, {ease: FlxEase.quadOut});
+		if (bottomLSelected) FlxTween.tween(bottomLButton.scale, {x: 0.5, y: 0.5}, 0.1, {ease: FlxEase.quadOut});
+		if (artSelected) FlxTween.tween(artButton.scale, {x: 0.5, y: 0.5}, 0.1, {ease: FlxEase.quadOut});
+
+		modsSelected = false;
+		jukeboxSelected = false;
+		bottomLSelected = false;
+		artSelected = false;
+	}
+
+	function deselectMainItems() {
+		var item = menuItems.members[curSelected];
+		item.animation.play('idle');
+		item.updateHitbox();
+		if (itemTweens[item.ID] != null) itemTweens[item.ID].cancel();
+		itemTweens[item.ID] = FlxTween.tween(item, {x: 100}, 0.15, {ease: FlxEase.quadOut});
+	}
+
+	function selectItem() {
+		selectedSomethin = true;
+		FlxG.sound.play(Paths.sound('confirmMenu'));
+		var choice:String = optionShit[curSelected];
+
+		if (choice != 'freeplay')
+		{
+			FlxTween.tween(FlxG.camera, {zoom: 1.15}, 1.1, {ease: FlxEase.quadInOut});
+			FlxG.camera.fade(FlxColor.BLACK, 0.8, false);
+		}
+
+		if (VsliceOptions.FLASHBANG)
+			FlxFlicker.flicker(host.magenta, 1.1, 0.15, false);
+
+		for (i in 0...menuItems.members.length)
+		{
+			if (i == curSelected) continue;
+			FlxTween.tween(menuItems.members[i], {alpha: 0, x: -500}, 0.5, {
+				ease: FlxEase.expoIn,
+				onComplete: function(twn:FlxTween) { menuItems.members[i].kill(); }
+			});
+		} 
+
+		FlxFlicker.flicker(menuItems.members[curSelected], 1, 0.06, false, false, function(flick:FlxFlicker)
+		{
+			switch (choice)
+			{
+				case 'story_mode': MusicBeatState.switchState(new StoryMenuState());
+				case 'freeplay':
+					{
+						host.persistentDraw = true;
+						host.persistentUpdate = false;
+						host.openSubState(new FreeplayState());
+						host.subStateOpened.addOnce(state -> {
+							selectedSomethin = false;
+							for (item in menuItems.members) {
+								item.revive();
+								item.visible = true;
+								item.alpha = 1;
+								item.x = 100;
+								if (itemTweens[item.ID] != null) itemTweens[item.ID].cancel();
+							}
+							changeItem(0);
+						});
+					}
+				case 'credits': MusicBeatState.switchState(new CreditsState());
+				case 'options': host.goToOptions();
+			}
+		});
+	}
+
+	function selectMods() {
+		#if MODS_ALLOWED
+		selectedSomethin = true;
+		FlxG.sound.play(Paths.sound('confirmMenu'));
+		modsButton.color = FlxColor.WHITE; 
+		FlxTween.tween(FlxG.camera, {zoom: 1.15}, 1.1, {ease: FlxEase.quadInOut});
+		FlxG.camera.fade(FlxColor.BLACK, 0.8, false, function() {
+			MusicBeatState.switchState(new states.ModsMenuState());
+		});
+		#else
+		selectedSomethin = false; 
+		#end
+	}
+
+	function selectJukebox() {
+		selectedSomethin = true;
+		FlxG.sound.play(Paths.sound('confirmMenu'));
+		FlxTween.tween(FlxG.camera, {zoom: 1.15}, 1.1, {ease: FlxEase.quadInOut});
+		FlxG.camera.fade(FlxColor.BLACK, 0.8, false, function() {
+			MusicBeatState.switchState(new states.JukeboxState());
+		});
+	}
+
+	function selectBottomL() {
+		selectedSomethin = true;
+		FlxG.sound.play(Paths.sound('confirmMenu'));
+		FlxTween.tween(FlxG.camera, {zoom: 1.15}, 1.1, {ease: FlxEase.quadInOut});
+		FlxG.camera.fade(FlxColor.BLACK, 0.8, false, function() {
+			MusicBeatState.switchState(new CharacterProfiles());
+		});
+	}
+
+	function selectArt() {
+		selectedSomethin = true;
+		FlxG.sound.play(Paths.sound('confirmMenu'));
+		FlxTween.tween(FlxG.camera, {zoom: 1.15}, 1.1, {ease: FlxEase.quadInOut});
+		FlxG.camera.fade(FlxColor.BLACK, 0.8, false, function() {
+			MusicBeatState.switchState(new ArtGallery());
+		});
+	}
+
+	function changeItem(huh:Int = 0)
+	{
+		if ((artSelected || bottomLSelected || jukeboxSelected || modsSelected) && huh != 0) return; 
+
+		if (huh != 0) FlxG.sound.play(Paths.sound('scrollMenu'));
+		if (itemTweens[curSelected] != null) itemTweens[curSelected].cancel();
+		menuItems.members[curSelected].animation.play('idle');
+		menuItems.members[curSelected].updateHitbox();
+		itemTweens[curSelected] = FlxTween.tween(menuItems.members[curSelected], {x: 100}, 0.15, {ease: FlxEase.quadOut});
+
+		curSelected += huh;
+		if (curSelected >= menuItems.length) curSelected = 0;
+		if (curSelected < 0) curSelected = menuItems.length - 1;
+		
+		var targetItem = menuItems.members[curSelected];
+		targetItem.animation.play('selected');
+		targetItem.centerOffsets();
+		if (itemTweens[curSelected] != null) itemTweens[curSelected].cancel();
+		itemTweens[curSelected] = FlxTween.tween(targetItem, {x: 140}, 0.2, {ease: FlxEase.quadOut});
+		
+		if (sideImageTween != null) sideImageTween.cancel();
+		sideImageTween = FlxTween.tween(sideImage, {x: FlxG.width + 300, alpha: 0}, 0.15, {
+			ease: FlxEase.expoIn,
+			onComplete: function(twn:FlxTween) {
+				sideImage.loadGraphic(Paths.image('Menu/' + sideImageNames[curSelected], 'shared'));
+				sideImage.updateHitbox();
+				sideImage.screenCenter(Y);
+				sideImage.x = FlxG.width + 200;
+				sideImage.alpha = 0;
+
+				sideImageTween = FlxTween.tween(sideImage, {x: FlxG.width - sideImage.width - 20, alpha: 1}, 0.4, {
+					ease: FlxEase.backOut
+				});
+			}
+		});
+		camFollow.setPosition(targetItem.getGraphicMidpoint().x, targetItem.getGraphicMidpoint().y);
+	}
 }
