@@ -45,7 +45,7 @@ class WarningState extends flixel.FlxState
         add(bodyText);
 
         // Footer Hint
-        hintText = new FlxText(0, FlxG.height - 80, FlxG.width, "Press ENTER to Continue", 24);
+        hintText = new FlxText(0, FlxG.height - 80, FlxG.width, "Press ENTER or TAP to Continue", 24);
         hintText.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.GRAY, CENTER);
         hintText.screenCenter(X);
         add(hintText);
@@ -60,8 +60,10 @@ class WarningState extends flixel.FlxState
     {
         super.update(elapsed);
         
-        // Direct Key Input to avoid crash from uninitialized controls
-        if (canContinue && !isTransitioning && (FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE))
+        var isKeyPressed:Bool = FlxG.keys.justPressed.ENTER || FlxG.keys.justPressed.SPACE;
+        var isTouched:Bool = FlxG.mouse.justPressed || (FlxG.touches != null && FlxG.touches.justStarted().length > 0);
+
+        if (canContinue && !isTransitioning && (isKeyPressed || isTouched))
         {
             isTransitioning = true;
             
