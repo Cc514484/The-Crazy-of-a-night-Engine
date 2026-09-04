@@ -11,9 +11,9 @@
 	<app if="PROFILE_BUILD" title="P-Slice Engine Profiling build" file="The Crazy of a night"
 		packageName="com.Yasa.testPslice" package="com.Yasa.testPslice" main="Main"
 		version="3.4.2" company="Yasa" />
-	<app if="mobile" unless="PROFILE_BUILD" title="P-Slice Engine" file="PSliceEngine"
-		packageName="com.mikolka9144.pslice" package="com.mikolka9144.pslice" main="Main"
-		version="3.4.2" company="mikolka9144" />
+	<app if="mobile" unless="PROFILE_BUILD" title="The Crazy of a night" file="The Crazy of a night"
+		packageName="com.Yasa.mowcy" package="com.Yasa.mowcy" main="Main"
+		version="3.4.2" company="Yasa" />
 	<!--Switch
 	Export with Unique ApplicationID and Icon-->
 	<set name="APP_ID" value="0x0100f6c013bbc000" />
