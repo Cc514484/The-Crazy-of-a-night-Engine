@@ -27,9 +27,6 @@ jobs:
         run: |
           sh ./setup/mobile.sh
 
-      - name: Remove Firebase Crashlytics Extension
-        run: haxelib remove extension-firebase-crashlytics || true
-
       - name: Configure Lime Android Settings
         run: |
           haxelib run lime config ANDROID_SDK $ANDROID_HOME
