@@ -17,7 +17,6 @@ import flixel.addons.transition.FlxTransitionableState;
 import states.ArtGallery;
 import states.CharacterProfiles;
 import states.JukeboxState;
-import states.StoryMenuState;
 
 #if !LEGACY_PSYCH
 #if MODS_ALLOWED
