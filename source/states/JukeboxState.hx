@@ -69,7 +69,7 @@ class JukeboxState extends MusicBeatState
 	var btnForward5 = new FlxSprite();
 	var tPlayPause:FlxText;
 
-	// ปุ่มย้อนกลับสำหรับหน้าจอสัมผัส (ไม่มีมาก่อน ใช้แค่ controls.BACK)
+	// ปุ่มย้อนกลับสำหรับหน้าจอสัมผัส
 	var btnBackTouch:FlxSprite;
 	var tBackTouch:FlxText;
 
@@ -95,12 +95,13 @@ class JukeboxState extends MusicBeatState
 	var isPaused:Bool = false;
 	var songSpeed:Float = 1.0;
 
+	// เก็บ error/debug ไว้แสดงบนจอถ้าโหลดไม่ได้เลยสักเพลง (ช่วยดีบักบนมือถือที่ไม่มี console)
+	var debugText:FlxText;
+
 	override function create()
 	{
 		super.create();
 
-		// ทำให้แตะหน้าจอ (touch) จำลองเป็น mouse event ได้ด้วย
-		// ปุ่มทุกปุ่มในหน้านี้ตรวจจับผ่าน FlxG.mouse อยู่แล้ว พอตั้งค่านี้ นิ้วแตะจะใช้งานได้ทันที
 		Multitouch.inputMode = MultitouchInputMode.NONE;
 		FlxG.mouse.enabled = true;
 		FlxG.mouse.visible = true;
@@ -109,7 +110,6 @@ class JukeboxState extends MusicBeatState
 			FlxG.sound.music.stop();
 		}
 
-		// พื้นหลังหลัก (แก้ไขพาธเป็น Menu/crBG เพื่อให้ตรงกับโฟลเดอร์ของคุณ)
 		bg = new FlxSprite().loadGraphic(Paths.image('Menu/crBG'));
 		bg.scrollFactor.set();
 		bg.setGraphicSize(Std.int(bg.width * 1.1));
@@ -117,8 +117,6 @@ class JukeboxState extends MusicBeatState
 		bg.screenCenter();
 		add(bg);
 
-		// สแกนหาเพลงในโฟลเดอร์ต่างๆ
-		// หมายเหตุ: "mods/" เป็นไฟล์จริงบน external storage เสมอ (แม้บนมือถือ) จึงใช้ sys.FileSystem ได้ตามปกติ
 		var directories:Map<String, String> = new Map<String, String>();
 
 		if (FileSystem.exists("mods/songs/")) {
@@ -140,9 +138,6 @@ class JukeboxState extends MusicBeatState
 			}
 		}
 
-		// "assets/songs/" ที่ฝังมากับตัวเกม: บนมือถือ (Android/iOS) ไฟล์เหล่านี้ไม่ใช่ path
-		// บนระบบไฟล์จริง sys.FileSystem.readDirectory จะหาไม่เจอ (นี่คือสาเหตุหลักที่ Jukebox
-		// โหลดเพลงไม่ขึ้นบนมือถือ) เราจึงต้องสร้างรายชื่อโฟลเดอร์จาก WeekData แทนการสแกนไดเรกทอรีจริง
 		#if desktop
 		if (FileSystem.exists("assets/songs/")) {
 			for (folder in FileSystem.readDirectory("assets/songs/")) {
@@ -152,7 +147,6 @@ class JukeboxState extends MusicBeatState
 		}
 		#end
 
-		// จัดเรียงเพลงตาม Week 
 		WeekData.reloadWeekFiles(false);
 		for (i in 0...WeekData.weeksList.length) {
 			var weekFile:WeekData = WeekData.weeksLoaded.get(WeekData.weeksList[i]);
@@ -168,9 +162,8 @@ class JukeboxState extends MusicBeatState
 					var lowSong = songName.toLowerCase();
 
 					#if !desktop
-					// บนมือถือ: ไม่มีการ readDirectory ของ "assets/songs/" ไว้ล่วงหน้า
-					// จึงสร้าง entry ให้ตรงๆ จากชื่อเพลงใน WeekData แล้วปล่อยให้ระบบโหลดเพลง
-					// ตรวจสอบการมีอยู่จริงผ่าน openfl.utils.Assets แทน (ดูใน getCaseInsensitiveFile/buildLoadTasks)
+					// บนมือถือ: เก็บ "ชื่อเพลงดิบ" ไว้ตรงๆ (ไม่ต้องเดา case ของโฟลเดอร์ล่วงหน้า)
+					// เพราะเราจะลองหลาย case ตอนเช็คไฟล์จริงใน resolveMobileAsset() แทน
 					if (!directories.exists(lowSong)) {
 						directories.set(lowSong, "assets/songs/" + songName + "/");
 					}
@@ -187,7 +180,6 @@ class JukeboxState extends MusicBeatState
 			}
 		}
 
-		// ดึงเพลงที่เหลือมาต่อท้ายสุด
 		for (songId in directories.keys()) {
 			var folderPath = directories.get(songId);
 			var folderName = folderPath.split("/")[folderPath.split("/").length - 2];
@@ -202,7 +194,6 @@ class JukeboxState extends MusicBeatState
 			songsFolderList.push("assets/songs/tutorial/");
 		}
 
-		// สร้างองค์ประกอบหน้าจอหลัก Jukebox
 		albumText = new FlxText(0, 40, FlxG.width, "ALBUMS: NONE", 32);
 		albumText.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		albumText.borderSize = 2;
@@ -236,19 +227,16 @@ class JukeboxState extends MusicBeatState
 		var btnY:Float = 540;
 		var leftStartX:Float = 100;
 
-		// ปุ่ม INST + คีย์ลัด [M]
 		btnMuteInst = new FlxSprite(leftStartX, btnY).loadGraphic(Paths.image('JukeboxUI/inst')); 
 		btnMuteInst.setGraphicSize(50, 50); btnMuteInst.updateHitbox(); add(btnMuteInst);
 		var t1:FlxText = new FlxText(leftStartX - 10, btnY + 55, 70, "INST\n[M]", 14).setFormat(Paths.font("vcr.ttf"), 14, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		t1.alignment = CENTER; add(t1);
 
-		// ปุ่ม VOC + คีย์ลัด [V]
 		btnMuteVocals = new FlxSprite(leftStartX + 80, btnY).loadGraphic(Paths.image('JukeboxUI/voc')); 
 		btnMuteVocals.setGraphicSize(50, 50); btnMuteVocals.updateHitbox(); add(btnMuteVocals);
 		var t2:FlxText = new FlxText(leftStartX + 70, btnY + 55, 70, "VOC\n[V]", 14).setFormat(Paths.font("vcr.ttf"), 14, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		t2.alignment = CENTER; add(t2);
 
-		// ปุ่ม RESET + คีย์ลัด [R]
 		btnRestart = new FlxSprite(leftStartX + 160, btnY).loadGraphic(Paths.image('JukeboxUI/Reset')); 
 		btnRestart.setGraphicSize(50, 50); btnRestart.updateHitbox(); add(btnRestart);
 		var t3:FlxText = new FlxText(leftStartX + 150, btnY + 55, 70, "RESET\n[R]", 14).setFormat(Paths.font("vcr.ttf"), 14, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -256,25 +244,21 @@ class JukeboxState extends MusicBeatState
 
 		var centerX:Float = FlxG.width / 2;
 		
-		// ปุ่ม -5S + คีย์ลัด [J]
 		btnBackward5 = new FlxSprite(centerX - 115, btnY).loadGraphic(Paths.image('JukeboxUI/back5s')); 
 		btnBackward5.setGraphicSize(50, 50); btnBackward5.updateHitbox(); add(btnBackward5);
 		var tBack:FlxText = new FlxText(centerX - 125, btnY + 55, 70, "-5S\n[J]", 14).setFormat(Paths.font("vcr.ttf"), 14, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		tBack.alignment = CENTER; add(tBack);
 
-		// ปุ่ม PAUSE / PLAY + คีย์ลัด [SPACE]
 		btnPlayPause = new FlxSprite(centerX - 25, btnY).loadGraphic(Paths.image('JukeboxUI/stop')); 
 		btnPlayPause.setGraphicSize(50, 50); btnPlayPause.updateHitbox(); add(btnPlayPause);
 		tPlayPause = new FlxText(centerX - 50, btnY + 55, 100, "PAUSE\n[SPACE]", 14).setFormat(Paths.font("vcr.ttf"), 14, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		tPlayPause.alignment = CENTER; add(tPlayPause);
 
-		// ปุ่ม +5S + คีย์ลัด [K]
 		btnForward5 = new FlxSprite(centerX + 65, btnY).loadGraphic(Paths.image('JukeboxUI/Re5s')); 
 		btnForward5.setGraphicSize(50, 50); btnForward5.updateHitbox(); add(btnForward5);
 		var tFor:FlxText = new FlxText(centerX + 55, btnY + 55, 70, "+5S\n[K]", 14).setFormat(Paths.font("vcr.ttf"), 14, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		tFor.alignment = CENTER; add(tFor);
 
-		// สัญลักษณ์ความเร็วเพลง [UP/DOWN]
 		speedText = new FlxText(120, 630, 100, "1.0", 28).setFormat(Paths.font("vcr.ttf"), 28, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(speedText);
 		var speedGuide:FlxText = new FlxText(120, 665, 120, "SPEED [↑/↓]", 12).setFormat(Paths.font("vcr.ttf"), 12, FlxColor.YELLOW, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -291,18 +275,20 @@ class JukeboxState extends MusicBeatState
 		progressBar.origin.set(0, 0); 
 		add(progressBar);
 
-		// ปุ่มย้อนกลับสำหรับทัชสกรีน (มือถือไม่มีปุ่ม ESC/BACK จริง)
-		btnBackTouch = new FlxSprite(20, 20).makeGraphic(90, 50, 0xAA000000);
+		btnBackTouch = new FlxSprite(FlxG.width - 110, 20).makeGraphic(90, 50, 0xAA000000);
 		add(btnBackTouch);
-		tBackTouch = new FlxText(20, 20, 90, "< BACK", 18);
+		tBackTouch = new FlxText(FlxG.width - 110, 20, 90, "BACK >", 18);
 		tBackTouch.setFormat(Paths.font("vcr.ttf"), 18, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(tBackTouch);
 
-		// แถบแจ้งเตือนคีย์เปลี่ยนเพลงหลักด้านล่างสุด
 		controlGuide = new FlxText(0, FlxG.height - 25, FlxG.width, "KEYS: [← / →] Change Song | [ESCAPE] Back | Click & Drag Progress Bar to Seek Time", 14).setFormat(Paths.font("vcr.ttf"), 14, FlxColor.YELLOW, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(controlGuide);
 
-		// UI หน้าจอโหลดดิ้ง
+		// ข้อความดีบัก (แสดงบนมือถือถ้าโหลดเพลงไม่สำเร็จเลยสักเพลง)
+		debugText = new FlxText(10, FlxG.height - 60, FlxG.width - 20, "", 14);
+		debugText.setFormat(Paths.font("vcr.ttf"), 14, FlxColor.RED, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		add(debugText);
+
 		loadingBG = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
 		add(loadingBG);
 
@@ -337,10 +323,10 @@ class JukeboxState extends MusicBeatState
 			var name = songsList[i];
 			var folder = songsFolderList[i];
 
-			var instPath:String = getCaseInsensitiveFile(folder, "Inst.ogg");
-			var vpPath:String = getCaseInsensitiveFile(folder, "Voices-Player.ogg");
-			var voPath:String = getCaseInsensitiveFile(folder, "Voices-Opponent.ogg");
-			var vPath:String = getCaseInsensitiveFile(folder, "Voices.ogg");
+			var instPath:String = getCaseInsensitiveFile(folder, name, "Inst.ogg");
+			var vpPath:String = getCaseInsensitiveFile(folder, name, "Voices-Player.ogg");
+			var voPath:String = getCaseInsensitiveFile(folder, name, "Voices-Opponent.ogg");
+			var vPath:String = getCaseInsensitiveFile(folder, name, "Voices.ogg");
 
 			if (instPath != "") loadTasks.push({songName: name, type: "inst", path: instPath});
 			if (vpPath != "" && voPath != "") {
@@ -372,26 +358,24 @@ class JukeboxState extends MusicBeatState
 		var progressRatio:Float = currentTaskIndex / loadTasks.length;
 		loadingBar.scale.x = progressRatio * 800;
 
-		// บนมือถือถ้า path เป็นไฟล์ในตัวเกม (ไม่ใช่ mods/) ให้โหลดผ่าน openfl.utils.Assets
-		// เพราะไฟล์ในตัว APK ไม่ใช่ path ระบบไฟล์จริง ใช้ Sound.loadFromFile ไม่ได้
 		var isModFile:Bool = task.path.startsWith("mods/");
 
 		#if !desktop
 		if (!isModFile) {
 			try {
-				if (Assets.exists(task.path, SOUND)) {
+				if (Assets.exists(task.path)) {
 					var snd:Sound = Assets.getSound(task.path);
-					onPreloadTaskLoaded(task, snd);
-				} else {
-					trace("Asset not found (mobile): " + task.path);
-					currentTaskIndex++;
-					new FlxTimer().start(0.03, function(tmr:FlxTimer) { startNextPreloadTask(); });
+					if (snd != null) {
+						onPreloadTaskLoaded(task, snd);
+						return;
+					}
 				}
+				trace("[Jukebox] Asset not found (mobile): " + task.path);
 			} catch(e:Dynamic) {
-				trace("Error loading asset (mobile): " + task.path + " -> " + e);
-				currentTaskIndex++;
-				new FlxTimer().start(0.03, function(tmr:FlxTimer) { startNextPreloadTask(); });
+				trace("[Jukebox] Error loading asset (mobile): " + task.path + " -> " + e);
 			}
+			currentTaskIndex++;
+			new FlxTimer().start(0.03, function(tmr:FlxTimer) { startNextPreloadTask(); });
 			return;
 		}
 		#end
@@ -399,7 +383,7 @@ class JukeboxState extends MusicBeatState
 		Sound.loadFromFile(task.path).onComplete(function(snd:Sound) {
 			onPreloadTaskLoaded(task, snd);
 		}).onError(function(err) {
-			trace("Skipped or Error loading file: " + task.path);
+			trace("[Jukebox] Skipped or Error loading file: " + task.path);
 			currentTaskIndex++;
 			new FlxTimer().start(0.03, function(tmr:FlxTimer) {
 				startNextPreloadTask();
@@ -431,6 +415,13 @@ class JukeboxState extends MusicBeatState
 		loadingText.visible = false;
 		loadingBarBG.visible = false;
 		loadingBar.visible = false;
+
+		if (preloadedInst.keys().hasNext() == false) {
+			// ไม่มีเพลงไหนโหลดสำเร็จเลยสักเพลง — โชว์ debug message บนจอ
+			debugText.text = "WARNING: No songs loaded. Songs found: " + songsList.length +
+				" | Check folder names/casing match WeekData song names.\nFirst folder tried: " +
+				(songsFolderList.length > 0 ? songsFolderList[0] : "(none)");
+		}
 		
 		changeSong(0); 
 	}
@@ -454,7 +445,6 @@ class JukeboxState extends MusicBeatState
 		if (FlxG.keys.justPressed.UP) adjustSpeed(0.1);
 		if (FlxG.keys.justPressed.DOWN) adjustSpeed(-0.1);
 
-		// Mouse / Touch Controls (Multitouch.inputMode = NONE ทำให้นิ้วแตะเข้ามาที่นี่ได้เหมือนเมาส์)
 		updateTextButtonMouse(leftArrow, function() { changeSong(-1); });
 		updateTextButtonMouse(rightArrow, function() { changeSong(1); });
 
@@ -467,7 +457,6 @@ class JukeboxState extends MusicBeatState
 
 		updateSpriteButtonMouse(btnBackTouch, function() { goBackToMenu(); });
 
-		// ระบบเมาส์/นิ้วรีเพลง (Scrubbing)
 		if (instSound != null && instSound.length > 0) {
 			if (FlxG.mouse.overlaps(progressBG) && FlxG.mouse.justPressed) {
 				isScrubbing = true;
@@ -530,11 +519,13 @@ class JukeboxState extends MusicBeatState
 		var album:String = "Unknown Album";
 		var albumImg:String = "unknown";
 
-		var jsonPath:String = songFolder + "jukebox.json";
-		var jsonExists:Bool = songFolder.startsWith("mods/") ? FileSystem.exists(jsonPath) : Assets.exists(jsonPath);
+		var isModFolder:Bool = songFolder.startsWith("mods/");
+		var jsonPath:String = isModFolder ? (songFolder + "jukebox.json") : resolveMobileAsset(songFolder, songName, "jukebox.json");
+
+		var jsonExists:Bool = isModFolder ? FileSystem.exists(jsonPath) : (jsonPath != "" && Assets.exists(jsonPath));
 		if (jsonExists) {
 			try {
-				var rawJson:String = songFolder.startsWith("mods/") ? File.getContent(jsonPath) : Assets.getText(jsonPath);
+				var rawJson:String = isModFolder ? File.getContent(jsonPath) : Assets.getText(jsonPath);
 				var meta:SongMetadata = Json.parse(rawJson);
 				if(meta.artist != null) artist = meta.artist;
 				if(meta.album != null) album = meta.album;
@@ -553,13 +544,12 @@ class JukeboxState extends MusicBeatState
 		tPlayPause.text = "PAUSE\n[SPACE]";
 
 		var modPath:String = "assets/";
-		if (songFolder.startsWith("mods/")) {
+		if (isModFolder) {
 			var parts = songFolder.split("/songs/");
 			if (parts.length > 0) modPath = parts[0] + "/";
 		}
 
 		var targetImagePath:String = "";
-		var isModImage:Bool = songFolder.startsWith("mods/");
 		
 		var checkPaths:Array<String> = [
 			modPath + "images/albums/" + albumImg + ".png",
@@ -577,13 +567,13 @@ class JukeboxState extends MusicBeatState
 		];
 
 		for (path in checkPaths) {
-			var exists:Bool = isModImage ? FileSystem.exists(path) : Assets.exists(path, IMAGE);
+			var exists:Bool = isModFolder ? FileSystem.exists(path) : Assets.exists(path);
 			if (exists) { targetImagePath = path; break; }
 		}
 
 		if (targetImagePath != "") {
 			try {
-				var bitmap:BitmapData = isModImage ? BitmapData.fromFile(targetImagePath) : Assets.getBitmapData(targetImagePath);
+				var bitmap:BitmapData = isModFolder ? BitmapData.fromFile(targetImagePath) : Assets.getBitmapData(targetImagePath);
 				var graphic:FlxGraphic = FlxGraphic.fromBitmapData(bitmap);
 				albumArt.loadGraphic(graphic); 
 
@@ -605,8 +595,11 @@ class JukeboxState extends MusicBeatState
 		vocalsPlayer.stop();
 		vocalsOpponent.stop();
 
+		var loadedAny:Bool = false;
+
 		if (preloadedInst.exists(songName)) {
 			instSound.loadEmbedded(preloadedInst.get(songName), false, false);
+			loadedAny = true;
 		}
 
 		var hasVocals:Bool = false;
@@ -619,9 +612,8 @@ class JukeboxState extends MusicBeatState
 			hasVocals = true;
 		}
 
-		// === เปิดระบบ LOOP เพลงอัตโนมัติที่นี่ ===
 		instSound.looped = true;
-		instSound.play();
+		if (loadedAny) instSound.play();
 		
 		if (hasVocals) {
 			vocalsPlayer.looped = true;
@@ -630,13 +622,19 @@ class JukeboxState extends MusicBeatState
 			vocalsOpponent.play();
 		}
 
+		if (!loadedAny) {
+			debugText.text = "Could not load audio for '" + songName + "'. Check that assets/songs/" + songName + "/Inst.ogg exists (case-sensitive on mobile).";
+		} else {
+			debugText.text = "";
+		}
+
 		setSongSpeed(songSpeed);
 		updateVocalsVolume();
 		instSound.volume = isMuted ? 0 : 1;
 	}
 
-	// รองรับทั้งไฟล์จริง (mods/ ผ่าน sys.FileSystem) และไฟล์ฝังในเกม (ผ่าน openfl.utils.Assets สำหรับมือถือ)
-	function getCaseInsensitiveFile(folder:String, file:String):String {
+	// ค้นหาไฟล์แบบไม่สนตัวพิมพ์เล็ก-ใหญ่ ทั้งของ mods/ (ผ่าน sys.FileSystem) และไฟล์ในตัวเกม (ผ่าน Assets, มือถือ)
+	function getCaseInsensitiveFile(folder:String, songName:String, file:String):String {
 		var isModFile:Bool = folder.startsWith("mods/");
 
 		if (isModFile) {
@@ -651,18 +649,46 @@ class JukeboxState extends MusicBeatState
 			return "";
 		}
 
-		// ไฟล์ในตัวเกม: ตรวจสอบผ่าน Assets.exists (ใช้งานได้ทั้ง desktop และ mobile)
 		#if desktop
 		if (FileSystem.exists(folder + file)) return folder + file;
 		if (FileSystem.exists(folder + file.toLowerCase())) return folder + file.toLowerCase();
 		if (FileSystem.exists(folder + file.toUpperCase())) return folder + file.toUpperCase();
 		return "";
 		#else
-		if (Assets.exists(folder + file, SOUND)) return folder + file;
-		if (Assets.exists(folder + file.toLowerCase(), SOUND)) return folder + file.toLowerCase();
-		if (Assets.exists(folder + file.toUpperCase(), SOUND)) return folder + file.toUpperCase();
-		return "";
+		return resolveMobileAsset(folder, songName, file);
 		#end
+	}
+
+	// ===== หัวใจของการแก้บั๊ก =====
+	// ลองทุก "การผสมกัน" ของ case ชื่อโฟลเดอร์ (เพลง) + case ชื่อไฟล์ เพราะ Assets.exists() บน
+	// Android เป็น case-sensitive แบบเป๊ะๆ ต่างจาก sys.FileSystem บน desktop
+	function resolveMobileAsset(originalFolder:String, songName:String, fileName:String):String {
+		var basePath:String = "assets/songs/";
+		var folderVariants:Array<String> = [];
+
+		// ชื่อดั้งเดิมจาก WeekData/โฟลเดอร์ที่ตรวจเจอ
+		if (!folderVariants.contains(songName)) folderVariants.push(songName);
+		if (!folderVariants.contains(songName.toLowerCase())) folderVariants.push(songName.toLowerCase());
+		if (!folderVariants.contains(songName.toUpperCase())) folderVariants.push(songName.toUpperCase());
+
+		// Title Case (ตัวแรกใหญ่ ที่เหลือเล็ก) เช่น "tutorial" -> "Tutorial"
+		if (songName.length > 0) {
+			var titleCase = songName.substr(0, 1).toUpperCase() + songName.substr(1).toLowerCase();
+			if (!folderVariants.contains(titleCase)) folderVariants.push(titleCase);
+		}
+
+		var fileVariants:Array<String> = [fileName, fileName.toLowerCase(), fileName.toUpperCase()];
+
+		for (folderV in folderVariants) {
+			for (fileV in fileVariants) {
+				var candidate = basePath + folderV + "/" + fileV;
+				if (Assets.exists(candidate)) {
+					return candidate;
+				}
+			}
+		}
+
+		return "";
 	}
 
 	function toggleMuteInst() {
@@ -713,7 +739,6 @@ class JukeboxState extends MusicBeatState
 		btnPlayPause.setGraphicSize(50, 50); btnPlayPause.updateHitbox();
 		tPlayPause.text = "PAUSE\n[SPACE]";
 
-		// มั่นใจว่าลูปเปิดอยู่ตอนกด Restart
 		instSound.looped = true;
 		vocalsPlayer.looped = true;
 		vocalsOpponent.looped = true;
@@ -749,7 +774,7 @@ class JukeboxState extends MusicBeatState
 			vocalsPlayer.volume = 0; vocalsOpponent.volume = 0;
 		} else {
 			vocalsPlayer.volume = 1;
-			var vpPath:String = getCaseInsensitiveFile(songsFolderList[curSelected], "Voices-Player.ogg");
+			var vpPath:String = getCaseInsensitiveFile(songsFolderList[curSelected], songsList[curSelected], "Voices-Player.ogg");
 			vocalsOpponent.volume = (vpPath != "") ? 1 : 0;
 		}
 	}
