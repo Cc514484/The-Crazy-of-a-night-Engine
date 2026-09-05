@@ -41,11 +41,10 @@ class CharacterProfiles extends MusicBeatState
     var secretList:Array<String> = [];
     var secretBios:Array<String> = [];
 
-    // [ข้อมูลดั้งเดิม - แผนสำรอง] แยกไว้สำหรับล้างค่าเพื่อเริ่มต้นโหลดใหม่ทุกรอบที่สลับเข้าหน้าจอ
     var defaultCharList:Array<String> = ['Stardust', 'Red', 'Audrey','Hank', 'mastercat', 'Rock'];
     var defaultCharBios:Array<String> = [
         "Name: Stardust/Hoshina\nAge: 25\nGender: Male (Femboy)\n\nStory: He is Hank's older brother. He became an orphan at the age of 11 due to unknown circumstances and has lived independently ever since. He raised his younger brother, Red/Hank, through many hardships. Fortunately, their parents left behind an inheritance, providing them with a stroke of luck amidst their misfortune.\n\nPersonality: Hoshina is a natural leader with a kind heart. He deeply loves and cares for his mischievous younger brother.\n\nRelationships: He is in a committed relationship with Katoshi, whom he loves dearly.",
-        "Name: Red\nAge: 19\nGender: Male (Loves tomboys)\n\nStory: Red is a very reclusive person. He suffers from recurring nightmares about his parents almost every night, which led to a period of deep depression between the ages of 10 and 15. This lasted until he met Boyfriend and Audrey, who became the lights of his life. He trusts Audrey more than anyone, and over time, she helped him fully recover from his depression. However, he still suffers from side effects—any extreme shock can cause him to lose his sanity and go mad. Eventually, Red asked Audrey to be his girlfriend because he loves her deeply for saving him from his dark times. Through her, he also met Rock, Stardust’s partner. Interestingly, Red is not close with his siblings at all. He was rejected from the experiments for being too weak and mentally unstable. Furthermore, Red deeply despises Hank, as Hank's experiments were the ultimate cause of their parents' death.\n\nPersonality: Around strangers or people he isn't close with, he is incredibly quiet and reserved. However, once he is with close friends, he becomes extremely annoying and mischievous to the max.\n\nRelationships: Audrey is his girlfriend, and they are deeply in love with each other. Stardust is his older brother, whom he loves very much.",
+        "Name: Red\nAge: 19\nGender: Male (Loves tomboys)\n\nStory: Red is a very reclusive person. He suffers from recurring nightmares about his parents almost every night, which led to a period of deep depression between the ages of 10 and 15. This lasted until he met Boyfriend and Audrey, who became the lights of his life. He trusts Audrey more than anyone, and over time, she helped him fully recover from his depression. However, he still suffers from side effects—any extreme shock can cause him to lose his sanity and go mad. Eventually, Red asked Audrey to be his girlfriend because he loves her deeply for saving him from his dark times. Through her, he also met Rock, Stardust's partner. Interestingly, Red is not close with his siblings at all. He was rejected from the experiments for being too weak and mentally unstable. Furthermore, Red deeply despises Hank, as Hank's experiments were the ultimate cause of their parents' death.\n\nPersonality: Around strangers or people he isn't close with, he is incredibly quiet and reserved. However, once he is with close friends, he becomes extremely annoying and mischievous to the max.\n\nRelationships: Audrey is his girlfriend, and they are deeply in love with each other. Stardust is his older brother, whom he loves very much.",
         "Name: Audrey\nAge: 19\nGender: Female (Tomboy)\n\nStory: Audrey is a very cheerful person, especially with her family. She was adopted by Daddy Dearest to become a superstar, but because she didn't inherit the 'singer's blood,' she couldn't perform as expected, leading to constant pressure. While her twin brother, Rock, ran away to live with his lover, Audrey chose to stay.\n\nPersonality: Generally very cheerful and friendly. However, she has a darker, yandere side and suffers from depression due to the pressure she faces, though she masks it by pretending everything is fine.\n\nRelationships: Hank is someone she loves deeply—to the point of wanting him all to herself. Rock is her twin brother.",
         "Name: Hank\nAge: 15\nGender: Male (Loves tomboys)\n\nStory: Hank is one of the modified humans created by his parents before they passed away, when he was just 1 year old. The experiment was known as 'Human Emoji'—a project aimed at transforming newborn babies into emoji faces by completely removing their necks and changing their skin color to match. Hank's creation was considered the ultimate success of this project. However, this catastrophic experiment was also the exact reason why their parents died, wiping out the household and leaving only the children behind.\n\nPersonality: This guy is incredibly annoying, a total crybaby, and extremely spoiled (in a purely trolling and mischievous way).\n\nRelationships: He is the youngest sibling in the family. As for whether he has a girlfriend? Absolutely not—nobody wants him.",
         "Name: Mastercat/Cat\nAge: 16\nGender: Male\n\nStory: Mastercat is one of the test subjects from a project called 'Animal-Human Compilation'—an experiment where cat genes were implanted into a fetus about 4 months before birth. Just like Hank, Mastercat was a successful creation of this project. While he deeply loves his oldest brother Stardust and his younger brother Hank, he does not get along with his older brother Red. Due to various past issues, Red constantly takes his anger out on Mastercat, treating him harshly and completely disregarding his feelings just because he doesn't look like a normal human.\n\nPersonality: Mastercat is extremely family-oriented (with the sole exception of Red). He has a strong habit of seeking out comfortable places to rest, and you can usually find him napping on a cozy sofa or curled up against someone he trusts.\n\nRelationships: He doesn't get along well with women at all, as they often look down on him and treat him like an ugly freak. On the other hand, his bond with his siblings varies greatly: he absolutely adores Stardust and loves to snuggle up against Stardust's thighs almost every chance he gets because it feels incredibly comfortable. Hank is also a younger brother whom Mastercat loves dearly, and Hank similarly enjoys snuggling up on Stardust's thighs too. However, Mastercat deeply detests Red because Red always uses him as a punching bag whenever he has a problem.",
@@ -54,7 +53,7 @@ class CharacterProfiles extends MusicBeatState
 
     var defaultSecretList:Array<String> = ['Yasa', 'Corost', 'someone', 'dodo', 'Taff', 'Maverick', 'Tord', 'kane', 'TaffVsdodo', 'Pepe', 'Tamp'];
     var defaultSecretBios:Array<String> = [
-        "Name: Yasa\n\nOne day, I joined Team Tfunk, the crew behind ^The Crazy of a night.^ I’ve worked on it, handling so many different things until the mod finally took shape and is now going incredibly well. Ever since I started working here, I’ve been much happier, and it has been an amazing journey.\n\nOh, and my name is Yasa. You shouldn’t know my age—or my gender. I am a core developer here and handle almost everything except the music; the systems and mechanics are all my doing. If you don’t like me being a furry, $I will turn you into a furry.$\n\nNow, go read the next profile. Who knows?",
+        "Name: Yasa\n\nOne day, I joined Team Tfunk, the crew behind ^The Crazy of a night.^ I've worked on it, handling so many different things until the mod finally took shape and is now going incredibly well. Ever since I started working here, I've been much happier, and it has been an amazing journey.\n\nOh, and my name is Yasa. You shouldn't know my age—or my gender. I am a core developer here and handle almost everything except the music; the systems and mechanics are all my doing. If you don't like me being a furry, $I will turn you into a furry.$\n\nNow, go read the next profile. Who knows?",
         "Name: Corost\n\nHe made a 3 broter broooo",
         "Name: someone\n\nWho Know?",
         "Name: dodo\n\nI love Kane suck femboy",
@@ -85,11 +84,10 @@ class CharacterProfiles extends MusicBeatState
     var switchHint:FlxText;
     var blackScreen:FlxSprite;
 
-    // ปุ่มย้อนกลับสำหรับหน้าจอสัมผัส
+    // ปุ่มย้อนกลับสำหรับหน้าจอสัมผัส (ย้ายมาไว้มุมขวาบนแล้ว)
     var btnBackTouch:FlxSprite;
     var tBackTouch:FlxText;
 
-    // ตัวแปรสำหรับลากนิ้วเลื่อนอ่าน bio (แทน mouse wheel ที่ไม่มีบนมือถือ)
     var isDraggingBio:Bool = false;
     var dragStartY:Float = 0;
     var bioStartY:Float = 0;
@@ -98,7 +96,6 @@ class CharacterProfiles extends MusicBeatState
     var currentCycleIdx:Int = 0;
     var loadedJsonProfiles:Map<String, SingleCharJson> = new Map<String, SingleCharJson>();
     
-    // ตัวแปรเก็บพาทโฟลเดอร์ที่ตรวจเจอไฟล์ล่าสุด เพื่อเอาไว้ให้พาร์ทโหลดรูปภาพดึงไปใช้งานต่อได้ถูกต้อง
     var activeModPath:String = "mods/"; 
 
     var bioOffsetX:Float = 100; 
@@ -106,7 +103,6 @@ class CharacterProfiles extends MusicBeatState
 
     override function create()
     {
-        // ทำให้แตะหน้าจอจำลองเป็น mouse event ได้ด้วย (ปุ่มลูกศร/ปุ่มย้อนกลับ ใช้ FlxG.mouse ตรวจจับ)
         Multitouch.inputMode = MultitouchInputMode.NONE;
         FlxG.mouse.enabled = true;
 
@@ -114,7 +110,6 @@ class CharacterProfiles extends MusicBeatState
         backend.Discord.DiscordClient.changePresence("Viewing Character Profiles", null);
         #end
 
-        // สแกนและโหลดข้อมูลไฟล์ภายนอกใหม่ทุกครั้งก่อนสร้างหน้าจอ UI
         scanAndLoadJsonFiles();
 
         FlxG.mouse.visible = true;
@@ -151,7 +146,6 @@ class CharacterProfiles extends MusicBeatState
         nameText.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER);
         nameGroup.add(nameText);
 
-        // ลูกศรซ้าย/ขวา — เพิ่มพื้นที่แตะให้ใหญ่ขึ้นด้วย hitbox โปร่งใสซ้อนด้านหลัง เพื่อให้กดง่ายขึ้นบนมือถือ
         leftArrow = new FlxText(-50, 5, 0, "<", 50);
         leftArrow.setFormat(Paths.font("vcr.ttf"), 50, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
         nameGroup.add(leftArrow);
@@ -169,10 +163,11 @@ class CharacterProfiles extends MusicBeatState
         blackScreen.alpha = 0;
         add(blackScreen);
 
-        // ปุ่มย้อนกลับที่แตะได้จริง (เดิมมีแค่ controls.BACK ที่พึ่งปุ่มจริง)
-        btnBackTouch = new FlxSprite(20, 20).makeGraphic(90, 50, 0xAA000000);
+        // ----- ปุ่มย้อนกลับ: ย้ายไปมุมขวาบนแล้ว -----
+        var backBtnWidth:Float = 90;
+        btnBackTouch = new FlxSprite(FlxG.width - backBtnWidth - 20, 20).makeGraphic(Std.int(backBtnWidth), 50, 0xAA000000);
         add(btnBackTouch);
-        tBackTouch = new FlxText(20, 20, 90, "< BACK", 18);
+        tBackTouch = new FlxText(FlxG.width - backBtnWidth - 20, 20, backBtnWidth, "BACK >", 18);
         tBackTouch.setFormat(Paths.font("vcr.ttf"), 18, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
         add(tBackTouch);
 
@@ -186,11 +181,9 @@ class CharacterProfiles extends MusicBeatState
             if (controls.UI_LEFT_P) changeSelection(-1);
             if (controls.UI_RIGHT_P) changeSelection(1);
 
-            // ----- Mouse / Touch: ปุ่มลูกศรเปลี่ยนตัวละคร (เดิมวาดไว้เฉยๆ ไม่มี logic) -----
             updateArrowTouch(leftArrow, -1);
             updateArrowTouch(rightArrow, 1);
 
-            // ----- Mouse / Touch: แตะ switchHint เพื่อสลับโหมดลับ (แทนปุ่ม TAB บนคีย์บอร์ด) -----
             if (FlxG.mouse.overlaps(switchHint)) {
                 switchHint.scale.set(1.05, 1.05);
                 if (FlxG.mouse.justPressed) toggleSecret();
@@ -198,13 +191,11 @@ class CharacterProfiles extends MusicBeatState
                 switchHint.scale.set(1.0, 1.0);
             }
 
-            // ----- เมาส์วีล (desktop) -----
             if (FlxG.mouse.wheel != 0) {
                 bioText.y += FlxG.mouse.wheel * 45;
                 updateBioClip();
             }
 
-            // ----- ลากนิ้วเลื่อนอ่าน bio (touch drag) -----
             var overBio:Bool = FlxG.mouse.overlaps(bioText) || (FlxG.mouse.x > ldiAnim.x + bioOffsetX - 20 && FlxG.mouse.x < ldiAnim.x + bioOffsetX + 350
                 && FlxG.mouse.y > ldiAnim.y + bioOffsetY - 20 && FlxG.mouse.y < ldiAnim.y + bioOffsetY + 540);
 
@@ -230,7 +221,6 @@ class CharacterProfiles extends MusicBeatState
             if (FlxG.keys.justPressed.TAB) toggleSecret();
         }
 
-        // ----- ปุ่มย้อนกลับที่แตะได้ -----
         if (FlxG.mouse.overlaps(btnBackTouch)) {
             btnBackTouch.alpha = 0.7;
             if (FlxG.mouse.justPressed) goBackToMenu();
@@ -267,7 +257,6 @@ class CharacterProfiles extends MusicBeatState
         }
     }
 
-    // === ส่วนพัฒนาใหม่: ฟังก์ชันสแกนหาโฟลเดอร์ของม็อดปัจจุบันแบบ Dynamic ===
     function scanAndLoadJsonFiles()
     {
         loadedJsonProfiles.clear();
@@ -278,15 +267,12 @@ class CharacterProfiles extends MusicBeatState
 
         var pathsToSearch:Array<String> = [];
 
-        // 1. ดึงชื่อโฟลเดอร์ม็อดปัจจุบันที่กำลังเล่นอยู่ (เช่น "The crazy of a night Revival Part 2" หรืออื่นๆ)
         if (Mods.currentModDirectory != null && Mods.currentModDirectory != "") {
             pathsToSearch.push("mods/" + Mods.currentModDirectory + "/CharacterProfiles/");
         }
         
-        // 2. โฟลเดอร์สำรองหากวางไว้ในรูทกลางของม็อด
         pathsToSearch.push("mods/CharacterProfiles/");
 
-        // 3. ตรวจสอบและเลือกโฟลเดอร์ที่ใช้งานได้จริง
         var targetDir:String = "";
         for (path in pathsToSearch) {
             if (FileSystem.exists(path) && FileSystem.isDirectory(path)) {
@@ -295,7 +281,6 @@ class CharacterProfiles extends MusicBeatState
             }
         }
 
-        // 4. แผนสำรองสุดท้าย: ถ้ายังหาไม่เจอ ให้สแกนทุกโฟลเดอร์ใน mods/ เผื่อหาห้อง CharacterProfiles เจอ
         if (targetDir == "" && FileSystem.exists("mods/") && FileSystem.isDirectory("mods/")) {
             for (dir in FileSystem.readDirectory("mods/")) {
                 var checkPath = "mods/" + dir + "/CharacterProfiles/";
@@ -306,7 +291,6 @@ class CharacterProfiles extends MusicBeatState
             }
         }
 
-        // พ่นบอกในคอมพิวเตอร์ว่าตอนนี้ระบบกำลังอ่านข้อมูลจากพาทไหนอยู่
         if (targetDir != "") {
             activeModPath = targetDir;
             trace("CharacterProfiles loading from: " + activeModPath);
@@ -352,13 +336,11 @@ class CharacterProfiles extends MusicBeatState
                 }
             }
         } else {
-            // หากไม่มีม็อดใดๆ สร้างโฟลเดอร์นี้ไว้เลย จะรันข้อมูล Fallback ในตัวเกมแทน
             activeModPath = "mods/";
             trace("No CharacterProfiles folder found in any mods. Using defaults.");
         }
     }
 
-    // === ฟังก์ชันโหลดรูปภาพภายนอกตามโฟลเดอร์ม็อดที่ตรวจเจอโดยอัตโนมัติ ===
     function tryLoadImage(sprite:FlxSprite, imageName:String, internalPath:String):Bool {
         var externalPath:String = activeModPath + imageName + ".png";
         
@@ -470,7 +452,9 @@ class CharacterProfiles extends MusicBeatState
         var targetArrow = (change > 0) ? rightArrow : leftArrow;
         if (change != 0) {
             targetArrow.scale.set(1.4, 1.4);
-            FlxTween.tween(targetArrow.scale, {x: 1, y: 1}, 0.2);
+            // แก้บั๊ก: ห้าม tween sprite.scale ตรงๆ เพราะเป็น pooled FlxPoint (สาเหตุของ "property x is not numeric")
+            // ต้อง tween ตัว sprite เองผ่าน property path "scale.x"/"scale.y" แทน
+            FlxTween.tween(targetArrow, {"scale.x": 1, "scale.y": 1}, 0.2);
         }
     }
 
