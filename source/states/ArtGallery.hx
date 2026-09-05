@@ -137,6 +137,8 @@ class ArtGallery extends MusicBeatState
                 if (controls.UI_RIGHT_P) changeSelection(1);
             }
             if (FlxG.keys.justPressed.ENTER && canEnterFull) toggleFullScreen();
+
+            checkTouchInput();
         }
 
         if (controls.BACK) {
@@ -147,6 +149,53 @@ class ArtGallery extends MusicBeatState
             }
         }
         super.update(elapsed);
+    }
+
+    /**
+     * รองรับนิ้วแตะ/เมาส์คลิกจริงบนอุปกรณ์ (แยกจาก touch->mouse simulation ของระบบ)
+     * แบ่งจอเป็น 3 โซน: ซ้าย = รูปก่อนหน้า, ขวา = รูปถัดไป, กลาง = เปิด/ปิดฟูลสกรีน
+     */
+    function checkTouchInput()
+    {
+        var tapX = getTapScreenX();
+        if (tapX == null) return;
+
+        if (isFullScreen) {
+            // แตะที่ไหนก็ได้ตอนฟูลสกรีน = ออกจากฟูลสกรีน
+            if (canEnterFull) toggleFullScreen();
+            return;
+        }
+
+        var leftZone = FlxG.width * 0.25;
+        var rightZone = FlxG.width * 0.75;
+
+        if (tapX < leftZone) {
+            if (canChange) changeSelection(-1);
+        } else if (tapX > rightZone) {
+            if (canChange) changeSelection(1);
+        } else {
+            if (canEnterFull) toggleFullScreen();
+        }
+    }
+
+    /**
+     * คืนตำแหน่ง X บนจอ (screen space) ของการแตะ/คลิกที่เพิ่งเกิดขึ้นในเฟรมนี้
+     * เช็คทั้งเมาส์จริงและนิ้วสัมผัสจริงทุกจุด (ไม่พึ่งการจำลอง touch -> mouse อย่างเดียว)
+     * คืนค่า null ถ้าเฟรมนี้ไม่มีการแตะ/คลิกใหม่
+     */
+    function getTapScreenX():Null<Float>
+    {
+        if (FlxG.mouse.justPressed)
+            return FlxG.mouse.screenX;
+
+        #if FLX_TOUCH
+        for (touch in FlxG.touches.list) {
+            if (touch.justPressed)
+                return touch.screenX;
+        }
+        #end
+
+        return null;
     }
 
     function toggleFullScreen()
