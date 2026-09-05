@@ -8,6 +8,7 @@ import mikolka.compatibility.ModsHelper;
 import options.OptionsState;
 import flixel.FlxSprite;
 import flixel.FlxG;
+import flixel.FlxObject;
 import flixel.util.FlxColor;
 import openfl.ui.Multitouch;
 import openfl.ui.MultitouchInputMode;
@@ -36,9 +37,7 @@ class MainMenuState extends MusicBeatState
 
 	override function create()
 	{
-		// ทำให้ touch จำลองเป็น mouse event ได้ด้วย
-		// วิธีนี้ทำให้ UI ที่ผูกกับ FlxG.mouse (เช่น DesktopMenuState)
-		// ตอบสนองต่อการแตะหน้าจอได้เต็มรูปแบบ พร้อมกับยังใช้เมาส์จริงได้ปกติ
+		// ทำให้ touch จำลองเป็น mouse event ได้ด้วย (ใช้เป็นตัวเสริม เผื่อบางเครื่องรองรับ)
 		Multitouch.inputMode = MultitouchInputMode.NONE;
 
 		// เปิดใช้เมาส์เสมอ ไม่ว่าจะเป็นแพลตฟอร์มไหน
@@ -92,8 +91,7 @@ class MainMenuState extends MusicBeatState
 		#end
 		super.create();
 		
-		// ใช้ DesktopMenuState เสมอ เพราะรองรับทั้ง mouse และ touch (ผ่าน Multitouch.inputMode = NONE ด้านบน)
-		// ไม่ต้องแยก MobileMenuState/DesktopMenuState ตาม controls.mobileC อีกต่อไป
+		// ใช้ DesktopMenuState เสมอ เพราะรองรับทั้ง mouse และ touch
 		new DesktopMenuState(this);
 	}
 
@@ -114,5 +112,51 @@ class MainMenuState extends MusicBeatState
 		if (FlxG.sound.music.volume < 0.8)
 			FlxG.sound.music.volume += 0.5 * elapsed;
 		super.update(elapsed);
+	}
+
+	/**
+	 * เช็คว่ามีการ "แตะเพิ่งกด" (justPressed) ทับวัตถุนี้หรือไม่
+	 * รองรับทั้งเมาส์จริง และนิ้วสัมผัสจริงบนอุปกรณ์ (FlxG.touches)
+	 * โดยไม่พึ่งพาแค่การจำลอง touch -> mouse ของระบบเพียงอย่างเดียว
+	 *
+	 * ใช้แทนการเช็ค FlxG.mouse.justPressed && FlxG.mouse.overlaps(obj) เดิม
+	 * เช่น: if (MainMenuState.checkPressed(myButton)) { ... }
+	 */
+	public static function checkPressed(obj:FlxObject):Bool
+	{
+		// เมาส์จริง (สำหรับเดสก์ท็อป หรือกรณีที่ touch->mouse simulation ทำงาน)
+		if (FlxG.mouse.justPressed && FlxG.mouse.overlaps(obj))
+			return true;
+
+		// นิ้วสัมผัสจริงทุกจุดบนจอ (multitouch อิสระ ไม่ผูกกับ mouse pointer เดียว)
+		#if FLX_TOUCH
+		for (touch in FlxG.touches.list)
+		{
+			if (touch.justPressed && touch.overlaps(obj))
+				return true;
+		}
+		#end
+
+		return false;
+	}
+
+	/**
+	 * เหมือน checkPressed แต่เช็คแบบ "กดค้างอยู่" (pressed) แทน justPressed
+	 * มีประโยชน์ตอนทำ hover/scale effect ตอนกดค้าง
+	 */
+	public static function checkHeld(obj:FlxObject):Bool
+	{
+		if (FlxG.mouse.pressed && FlxG.mouse.overlaps(obj))
+			return true;
+
+		#if FLX_TOUCH
+		for (touch in FlxG.touches.list)
+		{
+			if (touch.pressed && touch.overlaps(obj))
+				return true;
+		}
+		#end
+
+		return false;
 	}
 }
