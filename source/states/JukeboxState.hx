@@ -39,13 +39,6 @@ typedef LoadTask = {
 	var path:String;
 }
 
-/**
- * JukeboxState สำหรับ FNF P-Slice / Psych Engine
- * - อ่านเพลงจากโฟลเดอร์ mods/ ทั้งหมด
- * - อ่านภาพหน้าปกอัลบั้มจาก assets/ เป็นหลักตามระบบเดิมของเกม
- * - ปุ่มควบคุมมีขนาด 50x50 px เท่าเดิม ไม่ขยายใหญ่
- * - รองรับระบบ Touch Screen บนมือถือสมบูรณ์แบบ
- */
 class JukeboxState extends MusicBeatState
 {
 	var songsList:Array<String> = [];
@@ -178,7 +171,7 @@ class JukeboxState extends MusicBeatState
 		var btnY:Float = 540;
 		var leftStartX:Float = 100;
 
-		// ปุ่มต่าง ๆ ตั้งขนาด 50x50 px เท่าเดิมเหมือนตอนแรก
+		// ปุ่มต่าง ๆ ขนาด 50x50 px
 		btnMuteInst = new FlxSprite(leftStartX, btnY).loadGraphic(Paths.image('JukeboxUI/inst')); 
 		btnMuteInst.setGraphicSize(50, 50); btnMuteInst.updateHitbox(); add(btnMuteInst);
 		var t1:FlxText = new FlxText(leftStartX - 10, btnY + 55, 70, "INST\n[M]", 14).setFormat(Paths.font("vcr.ttf"), 14, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -231,7 +224,7 @@ class JukeboxState extends MusicBeatState
 		controlGuide.setFormat(Paths.font("vcr.ttf"), 12, FlxColor.YELLOW, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(controlGuide);
 
-		// ปุ่ม EXIT มุมขวาบนสำหรับหน้าจอสัมผัส
+		// ปุ่ม EXIT สำหรับหน้าจอสัมผัส
 		btnBackTouch = new FlxSprite(FlxG.width - 130, 20).makeGraphic(110, 42, 0xFF1E1E24);
 		btnBackTouch.alpha = 0.85;
 		add(btnBackTouch);
@@ -267,9 +260,6 @@ class JukeboxState extends MusicBeatState
 		}
 	}
 
-	/**
-	 * สแกนหาเพลงจากโฟลเดอร์ mods/ ทั้งหมด
-	 */
 	function scanSongsFromMods()
 	{
 		songsList = [];
@@ -387,9 +377,12 @@ class JukeboxState extends MusicBeatState
 
 		var snd:Sound = null;
 		#if sys
+		// -------------------------------------------------------------
+		// แก้จุดที่ผิด: ใช้ Sound.fromFile แทน Sound.loadFromFile
+		// -------------------------------------------------------------
 		try {
 			if (FileSystem.exists(task.path)) {
-				snd = Sound.loadFromFile(task.path);
+				snd = Sound.fromFile(task.path);
 			}
 		} catch(e:Dynamic) {}
 
@@ -444,7 +437,7 @@ class JukeboxState extends MusicBeatState
 
 		if (isLoading) return;
 
-		// การควบคุมด้วยคีย์บอร์ด
+		// คีย์บอร์ด
 		if (controls.UI_LEFT_P || FlxG.keys.justPressed.LEFT) changeSong(-1);
 		if (controls.UI_RIGHT_P || FlxG.keys.justPressed.RIGHT) changeSong(1);
 
@@ -458,7 +451,7 @@ class JukeboxState extends MusicBeatState
 		if (FlxG.keys.justPressed.UP) adjustSpeed(0.1);
 		if (FlxG.keys.justPressed.DOWN) adjustSpeed(-0.1);
 
-		// การควบคุมด้วยเมาส์และทัชสกรีน (ไม่แตะ scale ปุ่ม จึงมีขนาดคงที่ 50x50 ตลอดเวลา)
+		// เมาส์ / ทัชสกรีน (ขนาด 50x50 เท่าเดิม)
 		updateTextButtonMouse(leftArrow, function() { changeSong(-1); });
 		updateTextButtonMouse(rightArrow, function() { changeSong(1); });
 
@@ -470,7 +463,7 @@ class JukeboxState extends MusicBeatState
 		updateSpriteButtonMouse(btnForward5, function() { skipTime(5000); });
 		updateSpriteButtonMouse(btnBackTouch, function() { goBackToMenu(); });
 
-		// แถบเลื่อนเวลาเพลง (Progress Bar Drag / Scrubbing)
+		// แถบเวลาเพลง
 		if (instSound != null && instSound.length > 0) {
 			if (isMouseOrTouchOver(progressBG) && FlxG.mouse.justPressed) {
 				isScrubbing = true;
@@ -573,16 +566,13 @@ class JukeboxState extends MusicBeatState
 		btnPlayPause.updateHitbox();
 		tPlayPause.text = "PAUSE\n[SPACE]";
 
-		// โหลดภาพหน้าปกจาก assets/ เป็นหลักตามระบบเดิมของเกม
+		// โหลดภาพหน้าปกจาก assets/ เป็นหลักตามระบบเดิม
 		loadCoverImage(songFolder, albumImg);
 
-		// เล่นเพลงจาก RAM Cache ที่โหลดจาก mods/
+		// เล่นเพลงจากแคช mods/
 		playLoadedSong(songName);
 	}
 
-	/**
-	 * โหลดภาพหน้าปกอัลบั้มจาก assets/ เป็นหลักตามระบบเดิมของเกม
-	 */
 	function loadCoverImage(songFolder:String, albumImg:String)
 	{
 		var cleanImgName:String = albumImg;
@@ -596,7 +586,7 @@ class JukeboxState extends MusicBeatState
 			cleanImgName = cleanImgName.substr(7);
 		}
 
-		// 1. โหลดจาก assets/ ผ่าน Paths.image('albums/' + cleanImgName) ตามระบบเดิม
+		// 1. โหลดจาก assets/ ผ่าน Paths.image('albums/' + cleanImgName)
 		var graphic:FlxGraphic = Paths.image('albums/' + cleanImgName);
 		if (graphic == null) graphic = Paths.image(cleanImgName);
 		if (graphic == null) graphic = Paths.image('albums/unknown');
@@ -604,7 +594,7 @@ class JukeboxState extends MusicBeatState
 		if (graphic != null) {
 			albumArt.loadGraphic(graphic);
 		} else {
-			// 2. สำรวจโดยตรงใน assets/ หรือ mods/ เผื่อกรณีพิเศษ
+			// 2. สำรวจใน assets/ หรือ mods/ เผื่อกรณีพิเศษ
 			var loadedBitmap:BitmapData = null;
 			#if sys
 			var checkPaths:Array<String> = [
