@@ -63,15 +63,15 @@ class JukeboxState extends MusicBeatState
 	var loadingBarBG:FlxSprite;
 	var loadingBar:FlxSprite;  
 
-	// UI Buttons (ขนาด 50x50 px เท่าเดิมเหมือนตอนแรก)
+	// UI Buttons (ขนาด 50x50 px เท่าเดิม)
 	var leftArrow:FlxText;
 	var rightArrow:FlxText;
-	var btnMuteInst = new FlxSprite();
-	var btnMuteVocals = new FlxSprite();
-	var btnRestart = new FlxSprite();
-	var btnPlayPause = new FlxSprite();
-	var btnBackward5 = new FlxSprite();
-	var btnForward5 = new FlxSprite();
+	var btnMuteInst:FlxSprite;
+	var btnMuteVocals:FlxSprite;
+	var btnRestart:FlxSprite;
+	var btnPlayPause:FlxSprite;
+	var btnBackward5:FlxSprite;
+	var btnForward5:FlxSprite;
 	var tPlayPause:FlxText;
 
 	// ปุ่มย้อนกลับสำหรับหน้าจอสัมผัส (Touch Screen Exit Button)
@@ -130,7 +130,8 @@ class JukeboxState extends MusicBeatState
 
 		bg = new FlxSprite().loadGraphic(Paths.image('Menu/crBG'));
 		bg.scrollFactor.set();
-		bg.setGraphicSize(Std.int(bg.width * 1.1));
+		// แก้พื้นหลังไม่ให้ยืดผิดรูป
+		bg.setGraphicSize(Std.int(FlxG.width * 1.1), 0);
 		bg.updateHitbox();
 		bg.screenCenter();
 		add(bg);
@@ -171,7 +172,6 @@ class JukeboxState extends MusicBeatState
 		var btnY:Float = 540;
 		var leftStartX:Float = 100;
 
-		// ปุ่มต่าง ๆ ขนาด 50x50 px
 		btnMuteInst = new FlxSprite(leftStartX, btnY).loadGraphic(Paths.image('JukeboxUI/inst')); 
 		btnMuteInst.setGraphicSize(50, 50); btnMuteInst.updateHitbox(); add(btnMuteInst);
 		var t1:FlxText = new FlxText(leftStartX - 10, btnY + 55, 70, "INST\n[M]", 14).setFormat(Paths.font("vcr.ttf"), 14, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
@@ -212,11 +212,11 @@ class JukeboxState extends MusicBeatState
 		timeText = new FlxText(FlxG.width - 200, 630, 150, "0:00 / 0:00", 24).setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(timeText);
 
-		progressBG = new FlxSprite(220, 640).makeGraphic(840, 12, FlxColor.BLACK);
+		progressBG = new FlxSprite(220, 640).makeGraphic(840, 24, FlxColor.BLACK);
 		progressBG.alpha = 0.6;
 		add(progressBG);
 
-		progressBar = new FlxSprite(220, 640).makeGraphic(1, 12, FlxColor.GREEN);
+		progressBar = new FlxSprite(220, 640).makeGraphic(1, 24, FlxColor.GREEN);
 		progressBar.origin.set(0, 0); 
 		add(progressBar);
 
@@ -377,9 +377,6 @@ class JukeboxState extends MusicBeatState
 
 		var snd:Sound = null;
 		#if sys
-		// -------------------------------------------------------------
-		// แก้จุดที่ผิด: ใช้ Sound.fromFile แทน Sound.loadFromFile
-		// -------------------------------------------------------------
 		try {
 			if (FileSystem.exists(task.path)) {
 				snd = Sound.fromFile(task.path);
@@ -451,33 +448,52 @@ class JukeboxState extends MusicBeatState
 		if (FlxG.keys.justPressed.UP) adjustSpeed(0.1);
 		if (FlxG.keys.justPressed.DOWN) adjustSpeed(-0.1);
 
-		// เมาส์ / ทัชสกรีน (ขนาด 50x50 เท่าเดิม)
-		updateTextButtonMouse(leftArrow, function() { changeSong(-1); });
-		updateTextButtonMouse(rightArrow, function() { changeSong(1); });
+		// ตรวจจับการกดปุ่ม (เมาส์ + ทัชสกรีน)
+		updateButtonLogic(leftArrow, function() { changeSong(-1); });
+		updateButtonLogic(rightArrow, function() { changeSong(1); });
+		updateButtonLogic(btnMuteInst, toggleMuteInst);
+		updateButtonLogic(btnMuteVocals, toggleMuteVocals);
+		updateButtonLogic(btnRestart, restartSong);
+		updateButtonLogic(btnBackward5, function() { skipTime(-5000); });
+		updateButtonLogic(btnPlayPause, togglePlayPause);
+		updateButtonLogic(btnForward5, function() { skipTime(5000); });
+		updateButtonLogic(btnBackTouch, function() { goBackToMenu(); });
 
-		updateSpriteButtonMouse(btnMuteInst, toggleMuteInst);
-		updateSpriteButtonMouse(btnMuteVocals, toggleMuteVocals);
-		updateSpriteButtonMouse(btnRestart, restartSong);
-		updateSpriteButtonMouse(btnBackward5, function() { skipTime(-5000); });
-		updateSpriteButtonMouse(btnPlayPause, togglePlayPause);
-		updateSpriteButtonMouse(btnForward5, function() { skipTime(5000); });
-		updateSpriteButtonMouse(btnBackTouch, function() { goBackToMenu(); });
-
-		// แถบเวลาเพลง
+		// ระบบลากแถบเวลา (รองรับทั้งเมาส์และทัช)
 		if (instSound != null && instSound.length > 0) {
-			if (isMouseOrTouchOver(progressBG) && FlxG.mouse.justPressed) {
-				isScrubbing = true;
+			
+			var inputJustPressed = FlxG.mouse.justPressed;
+			var inputReleased = FlxG.mouse.justReleased;
+			var inputX:Float = FlxG.mouse.x;
+			var inputY:Float = FlxG.mouse.y;
+
+			#if FLX_TOUCH
+			if (FlxG.touches.list.length > 0) {
+				var touch = FlxG.touches.list[0];
+				inputJustPressed = inputJustPressed || touch.justPressed;
+				inputReleased = inputReleased || touch.justReleased;
+				inputX = touch.x;
+				inputY = touch.y;
 			}
-			if (FlxG.mouse.justReleased) {
+			#end
+
+			if (inputJustPressed) {
+				var pad = 20.0;
+				if (inputX >= progressBG.x - pad && inputX <= progressBG.x + progressBG.width + pad &&
+					inputY >= progressBG.y - pad && inputY <= progressBG.y + progressBG.height + pad) {
+					isScrubbing = true;
+				}
+			}
+			if (inputReleased) {
 				isScrubbing = false;
 			}
 
 			if (isScrubbing) {
-				var mouseX:Float = FlxG.mouse.x - progressBG.x;
-				if (mouseX < 0) mouseX = 0;
-				if (mouseX > progressBG.width) mouseX = progressBG.width;
+				var localX:Float = inputX - progressBG.x;
+				if (localX < 0) localX = 0;
+				if (localX > progressBG.width) localX = progressBG.width;
 				
-				var pct:Float = mouseX / progressBG.width;
+				var pct:Float = localX / progressBG.width;
 				var targetTime:Float = pct * instSound.length;
 				
 				instSound.time = targetTime;
@@ -566,10 +582,7 @@ class JukeboxState extends MusicBeatState
 		btnPlayPause.updateHitbox();
 		tPlayPause.text = "PAUSE\n[SPACE]";
 
-		// โหลดภาพหน้าปกจาก assets/ เป็นหลักตามระบบเดิม
 		loadCoverImage(songFolder, albumImg);
-
-		// เล่นเพลงจากแคช mods/
 		playLoadedSong(songName);
 	}
 
@@ -586,7 +599,6 @@ class JukeboxState extends MusicBeatState
 			cleanImgName = cleanImgName.substr(7);
 		}
 
-		// 1. โหลดจาก assets/ ผ่าน Paths.image('albums/' + cleanImgName)
 		var graphic:FlxGraphic = Paths.image('albums/' + cleanImgName);
 		if (graphic == null) graphic = Paths.image(cleanImgName);
 		if (graphic == null) graphic = Paths.image('albums/unknown');
@@ -594,7 +606,6 @@ class JukeboxState extends MusicBeatState
 		if (graphic != null) {
 			albumArt.loadGraphic(graphic);
 		} else {
-			// 2. สำรวจใน assets/ หรือ mods/ เผื่อกรณีพิเศษ
 			var loadedBitmap:BitmapData = null;
 			#if sys
 			var checkPaths:Array<String> = [
@@ -628,7 +639,15 @@ class JukeboxState extends MusicBeatState
 			}
 		}
 
-		albumArt.setGraphicSize(440, 310);
+		// แก้ปัญหาภาพยืด (รักษา Aspect Ratio) ให้พอดีกับกรอบ 440x310
+		albumArt.scale.set(1, 1);
+		albumArt.updateHitbox();
+		
+		var scaleX:Float = 440 / albumArt.width;
+		var scaleY:Float = 310 / albumArt.height;
+		var finalScale:Float = Math.min(scaleX, scaleY);
+		
+		albumArt.scale.set(finalScale, finalScale);
 		albumArt.updateHitbox();
 		albumArt.screenCenter(X);
 	}
@@ -750,38 +769,44 @@ class JukeboxState extends MusicBeatState
 		return "";
 	}
 
-	function updateSpriteButtonMouse(spr:FlxSprite, onClick:Void->Void)
+	// ฟังก์ชันใหม่: จัดการคลิก/ทัชแบบรวมศูนย์ เพื่อให้รองรับทั้งเมาส์และหน้าจอสัมผัสแบบ 100%
+	function updateButtonLogic(obj:flixel.FlxObject, onClick:Void->Void)
 	{
-		if (spr == null || !spr.visible) return;
-		if (isMouseOrTouchOver(spr)) {
-			if (FlxG.mouse.justPressed) {
-				FlxG.sound.play(Paths.sound('scrollMenu'));
-				onClick();
+		if (obj == null || !obj.visible) return;
+		
+		var pad:Float = 15.0;
+		var isClicked = false;
+
+		// ตรวจสอบเมาส์ PC
+		if (FlxG.mouse.justPressed) {
+			if (FlxG.mouse.x >= obj.x - pad && FlxG.mouse.x <= obj.x + obj.width + pad &&
+				FlxG.mouse.y >= obj.y - pad && FlxG.mouse.y <= obj.y + obj.height + pad) {
+				isClicked = true;
 			}
 		}
-	}
 
-	function updateTextButtonMouse(txt:FlxText, onClick:Void->Void)
-	{
-		if (txt == null || !txt.visible) return;
-		if (isMouseOrTouchOver(txt)) {
-			txt.color = FlxColor.YELLOW;
-			if (FlxG.mouse.justPressed) {
-				FlxG.sound.play(Paths.sound('scrollMenu'));
-				onClick();
+		// ตรวจสอบหน้าจอสัมผัส (ทัชสกรีน/มือถือ)
+		#if FLX_TOUCH
+		for (touch in FlxG.touches.justStarted()) {
+			if (touch.x >= obj.x - pad && touch.x <= obj.x + obj.width + pad &&
+				touch.y >= obj.y - pad && touch.y <= obj.y + obj.height + pad) {
+				isClicked = true;
 			}
-		} else {
-			txt.color = FlxColor.WHITE;
 		}
-	}
+		#end
 
-	function isMouseOrTouchOver(spr:FlxSprite):Bool
-	{
-		var pad:Float = 12.0; 
-		var mx = FlxG.mouse.x;
-		var my = FlxG.mouse.y;
-		return (mx >= spr.x - pad && mx <= spr.x + spr.width + pad &&
-				my >= spr.y - pad && my <= spr.y + spr.height + pad);
+		if (isClicked) {
+			FlxG.sound.play(Paths.sound('scrollMenu'));
+			
+			// ถ้าเป็น FlxText (ปุ่มที่เป็นตัวอักษร) ให้กะพริบสีเหลืองชั่วคราว
+			if (Std.isOfType(obj, FlxText)) {
+				var txt = cast(obj, FlxText);
+				txt.color = FlxColor.YELLOW;
+				new FlxTimer().start(0.1, function(tmr:FlxTimer) { txt.color = FlxColor.WHITE; });
+			}
+			
+			onClick();
+		}
 	}
 
 	function formatTime(ms:Float):String
