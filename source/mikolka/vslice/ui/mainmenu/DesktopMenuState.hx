@@ -223,8 +223,81 @@ class DesktopMenuState extends FlxBasic
 		return true; // ปลดล็อกปุ่ม Mods ตั้งแต่เริ่มต้นทันที
 	}
 
+	/**
+	 * เช็คว่านิ้ว/เมาส์แตะโดนปุ่มไหนในเมนูบ้าง แล้วสั่งงานทันที
+	 * (แตะ = เลือกเลยในทีเดียว ไม่ต้องเลื่อนไฮไลต์แบบกดจอย/คีย์บอร์ด)
+	 * เรียกทุกเฟรมจาก update() ตอนที่ selectedSomethin ยังเป็น false
+	 */
+	function checkTouchInput()
+	{
+		// เมนูหลักฝั่งซ้าย (story_mode / freeplay / credits / options)
+		for (item in menuItems.members)
+		{
+			if (item != null && item.exists && item.visible && MainMenuState.checkPressed(item))
+			{
+				resetSideSelection();
+				if (curSelected != item.ID)
+					changeItem(item.ID - curSelected);
+				selectItem();
+				return;
+			}
+		}
+
+		// ปุ่มขวา 4 ปุ่ม: mods / jukebox / character profiles / art gallery
+		if (modsButton != null && modsButton.exists && modsButton.visible && MainMenuState.checkPressed(modsButton))
+		{
+			#if MODS_ALLOWED
+			deselectMainItems();
+			resetSideSelection();
+			modsSelected = true;
+			selectMods();
+			#end
+			return;
+		}
+
+		if (jukeboxButton != null && jukeboxButton.exists && jukeboxButton.visible && MainMenuState.checkPressed(jukeboxButton))
+		{
+			deselectMainItems();
+			resetSideSelection();
+			jukeboxSelected = true;
+			selectJukebox();
+			return;
+		}
+
+		if (bottomLButton != null && bottomLButton.exists && bottomLButton.visible && MainMenuState.checkPressed(bottomLButton))
+		{
+			deselectMainItems();
+			resetSideSelection();
+			bottomLSelected = true;
+			selectBottomL();
+			return;
+		}
+
+		if (artButton != null && artButton.exists && artButton.visible && MainMenuState.checkPressed(artButton))
+		{
+			deselectMainItems();
+			resetSideSelection();
+			artSelected = true;
+			selectArt();
+			return;
+		}
+	}
+
+	function resetSideSelection()
+	{
+		artSelected = false;
+		bottomLSelected = false;
+		jukeboxSelected = false;
+		modsSelected = false;
+	}
+
 	override function update(elapsed:Float)
 	{
+		if (!selectedSomethin)
+		{
+			checkTouchInput();
+		}
+
 		if (!selectedSomethin)
 		{
 			if (!artSelected && !bottomLSelected && !jukeboxSelected && !modsSelected) 
