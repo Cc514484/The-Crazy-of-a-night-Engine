@@ -14,6 +14,8 @@ import haxe.io.Path;
 import mikolka.vslice.ui.MainMenuState;
 import backend.ClientPrefs;
 import openfl.display.BitmapData;
+import openfl.ui.Multitouch;
+import openfl.ui.MultitouchInputMode;
 
 // แก้ไขตรงนี้: Import Class DiscordClient ที่อยู่ในไฟล์ Discord.hx [cite: 55, 56]
 // import backend.Discord.DiscordClient; 
@@ -41,6 +43,11 @@ class ArtGallery extends MusicBeatState
         #end
 
         FlxG.cameras.reset();
+
+        // จุดที่ขาดไปก่อนหน้านี้: ถ้าไม่เปิดสองบรรทัดนี้ FlxG.mouse จะไม่อัปเดตสถานะ justPressed
+        // เลย ทำให้ checkTouchInput() ด้านล่างไม่มีวันทำงาน (นิ้วแตะจะไม่ถูกนับเป็น mouse event)
+        Multitouch.inputMode = MultitouchInputMode.NONE;
+        FlxG.mouse.enabled = true;
         FlxG.mouse.visible = false;
 
         bgDesat = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
