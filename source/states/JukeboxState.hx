@@ -63,7 +63,7 @@ class JukeboxState extends MusicBeatState
 	var loadingBarBG:FlxSprite;
 	var loadingBar:FlxSprite;  
 
-	// UI Buttons (ขนาด 50x50 px เท่าเดิม)
+	// UI Buttons (ขนาด 50x50 px)
 	var leftArrow:FlxText;
 	var rightArrow:FlxText;
 	var btnMuteInst:FlxSprite;
@@ -111,6 +111,11 @@ class JukeboxState extends MusicBeatState
 		DiscordClient.changePresence("Jukebox - Listening to Music", null);
 		#end
 
+		// ปิดเสียงเพลงของ Main Menu ที่อาจจะเล่นค้างอยู่เพื่อไม่ให้ซ้อนกัน
+		if (FlxG.sound.music != null && FlxG.sound.music.playing) {
+			FlxG.sound.music.stop();
+		}
+
 		// เปิดโหมด Touch Point เพื่อให้จอมือถือแตะติด 100%
 		#if FLX_TOUCH
 		Multitouch.inputMode = MultitouchInputMode.TOUCH_POINT;
@@ -130,7 +135,6 @@ class JukeboxState extends MusicBeatState
 
 		bg = new FlxSprite().loadGraphic(Paths.image('Menu/crBG'));
 		bg.scrollFactor.set();
-		// แก้พื้นหลังไม่ให้ยืดผิดรูป
 		bg.setGraphicSize(Std.int(FlxG.width * 1.1), 0);
 		bg.updateHitbox();
 		bg.screenCenter();
@@ -448,7 +452,7 @@ class JukeboxState extends MusicBeatState
 		if (FlxG.keys.justPressed.UP) adjustSpeed(0.1);
 		if (FlxG.keys.justPressed.DOWN) adjustSpeed(-0.1);
 
-		// ตรวจจับการกดปุ่ม (เมาส์ + ทัชสกรีน)
+		// ตรวจจับการกดปุ่ม (เมาส์ + ทัชสกรีน) พร้อมเอฟเฟกต์กะพริบสี
 		updateButtonLogic(leftArrow, function() { changeSong(-1); });
 		updateButtonLogic(rightArrow, function() { changeSong(1); });
 		updateButtonLogic(btnMuteInst, toggleMuteInst);
@@ -458,6 +462,7 @@ class JukeboxState extends MusicBeatState
 		updateButtonLogic(btnPlayPause, togglePlayPause);
 		updateButtonLogic(btnForward5, function() { skipTime(5000); });
 		updateButtonLogic(btnBackTouch, function() { goBackToMenu(); });
+		updateButtonLogic(tBackTouch, function() { goBackToMenu(); }); // ให้กดที่ตัวอักษร EXIT ได้ด้วย
 
 		// ระบบลากแถบเวลา (รองรับทั้งเมาส์และทัช)
 		if (instSound != null && instSound.length > 0) {
@@ -522,9 +527,12 @@ class JukeboxState extends MusicBeatState
 	{
 		FlxG.sound.play(Paths.sound('cancelMenu'));
 		destroyAudio();
+		
 		#if FLX_TOUCH
 		Multitouch.inputMode = MultitouchInputMode.NONE;
 		#end
+		
+		// กลับไปหน้า Main Menu โดยให้มันจัดการเล่นเพลงเมนูขึ้นมาใหม่เอง
 		MusicBeatState.switchState(new mikolka.vslice.ui.MainMenuState());
 	}
 
@@ -576,8 +584,10 @@ class JukeboxState extends MusicBeatState
 		artistText.text = "BY: " + artist.toUpperCase();
 		albumText.text = "ALBUM: " + album.toUpperCase();
 
+		// รีเซ็ตปุ่ม Play/Pause เป็นสถานะ "เล่นอยู่" (สีขาว)
 		isPaused = false;
 		btnPlayPause.loadGraphic(Paths.image('JukeboxUI/stop'));
+		btnPlayPause.color = FlxColor.WHITE; 
 		btnPlayPause.setGraphicSize(50, 50); 
 		btnPlayPause.updateHitbox();
 		tPlayPause.text = "PAUSE\n[SPACE]";
@@ -639,7 +649,7 @@ class JukeboxState extends MusicBeatState
 			}
 		}
 
-		// แก้ปัญหาภาพยืด (รักษา Aspect Ratio) ให้พอดีกับกรอบ 440x310
+		// รักษาอัตราส่วนภาพปกอัลบั้ม
 		albumArt.scale.set(1, 1);
 		albumArt.updateHitbox();
 		
@@ -690,12 +700,14 @@ class JukeboxState extends MusicBeatState
 			vocalsPlayer.pause();
 			vocalsOpponent.pause();
 			btnPlayPause.loadGraphic(Paths.image('JukeboxUI/play'));
+			btnPlayPause.color = FlxColor.RED; // หยุดเพลงเปลี่ยนปุ่มเป็นสีแดง
 			tPlayPause.text = "PLAY\n[SPACE]";
 		} else {
 			instSound.resume();
 			vocalsPlayer.resume();
 			vocalsOpponent.resume();
 			btnPlayPause.loadGraphic(Paths.image('JukeboxUI/stop'));
+			btnPlayPause.color = FlxColor.WHITE; // เล่นเพลงกลับมาเป็นสีขาว
 			tPlayPause.text = "PAUSE\n[SPACE]";
 		}
 		btnPlayPause.setGraphicSize(50, 50);
@@ -769,7 +781,7 @@ class JukeboxState extends MusicBeatState
 		return "";
 	}
 
-	// ฟังก์ชันใหม่: จัดการคลิก/ทัชแบบรวมศูนย์ เพื่อให้รองรับทั้งเมาส์และหน้าจอสัมผัสแบบ 100%
+	// ฟังก์ชันจัดการคลิก/ทัช พร้อมเพิ่มลูกเล่นกระพริบสีเวลากด
 	function updateButtonLogic(obj:flixel.FlxObject, onClick:Void->Void)
 	{
 		if (obj == null || !obj.visible) return;
@@ -785,7 +797,7 @@ class JukeboxState extends MusicBeatState
 			}
 		}
 
-		// ตรวจสอบหน้าจอสัมผัส (ทัชสกรีน/มือถือ)
+		// ตรวจสอบหน้าจอสัมผัส
 		#if FLX_TOUCH
 		for (touch in FlxG.touches.justStarted()) {
 			if (touch.x >= obj.x - pad && touch.x <= obj.x + obj.width + pad &&
@@ -798,11 +810,19 @@ class JukeboxState extends MusicBeatState
 		if (isClicked) {
 			FlxG.sound.play(Paths.sound('scrollMenu'));
 			
-			// ถ้าเป็น FlxText (ปุ่มที่เป็นตัวอักษร) ให้กะพริบสีเหลืองชั่วคราว
+			// ถ้าเป็น FlxText (ปุ่มตัวอักษร) ให้กะพริบเป็นสีเหลืองชั่วคราว
 			if (Std.isOfType(obj, FlxText)) {
 				var txt = cast(obj, FlxText);
 				txt.color = FlxColor.YELLOW;
 				new FlxTimer().start(0.1, function(tmr:FlxTimer) { txt.color = FlxColor.WHITE; });
+			}
+			// ถ้าเป็น FlxSprite (ปุ่มไอคอน) และไม่ใช่ปุ่มที่มีสถานะเปิด/ปิด (Mute/Play) ให้กะพริบเป็นสีเทา
+			else if (Std.isOfType(obj, FlxSprite)) {
+				var spr = cast(obj, FlxSprite);
+				if (spr != btnMuteInst && spr != btnMuteVocals && spr != btnPlayPause) {
+					spr.color = FlxColor.GRAY;
+					new FlxTimer().start(0.1, function(tmr:FlxTimer) { spr.color = FlxColor.WHITE; });
+				}
 			}
 			
 			onClick();
