@@ -14,6 +14,8 @@ import flixel.addons.text.FlxTypeText;
 import flixel.text.FlxText.FlxTextFormat;
 import flixel.text.FlxText.FlxTextFormatMarkerPair;
 import mikolka.vslice.ui.MainMenuState;
+import openfl.ui.Multitouch;
+import openfl.ui.MultitouchInputMode;
 
 // === ส่วนดึงข้อมูลภายนอกแบบเรียลไทม์ และดึงโฟลเดอร์ม็อดอัตโนมัติ ===
 import haxe.Json;
@@ -83,6 +85,15 @@ class CharacterProfiles extends MusicBeatState
     var switchHint:FlxText;
     var blackScreen:FlxSprite;
 
+    // ปุ่มย้อนกลับสำหรับหน้าจอสัมผัส
+    var btnBackTouch:FlxSprite;
+    var tBackTouch:FlxText;
+
+    // ตัวแปรสำหรับลากนิ้วเลื่อนอ่าน bio (แทน mouse wheel ที่ไม่มีบนมือถือ)
+    var isDraggingBio:Bool = false;
+    var dragStartY:Float = 0;
+    var bioStartY:Float = 0;
+
     var cycleTimer:FlxTimer;
     var currentCycleIdx:Int = 0;
     var loadedJsonProfiles:Map<String, SingleCharJson> = new Map<String, SingleCharJson>();
@@ -95,6 +106,10 @@ class CharacterProfiles extends MusicBeatState
 
     override function create()
     {
+        // ทำให้แตะหน้าจอจำลองเป็น mouse event ได้ด้วย (ปุ่มลูกศร/ปุ่มย้อนกลับ ใช้ FlxG.mouse ตรวจจับ)
+        Multitouch.inputMode = MultitouchInputMode.NONE;
+        FlxG.mouse.enabled = true;
+
         #if DISCORD_ALLOWED
         backend.Discord.DiscordClient.changePresence("Viewing Character Profiles", null);
         #end
@@ -136,6 +151,7 @@ class CharacterProfiles extends MusicBeatState
         nameText.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER);
         nameGroup.add(nameText);
 
+        // ลูกศรซ้าย/ขวา — เพิ่มพื้นที่แตะให้ใหญ่ขึ้นด้วย hitbox โปร่งใสซ้อนด้านหลัง เพื่อให้กดง่ายขึ้นบนมือถือ
         leftArrow = new FlxText(-50, 5, 0, "<", 50);
         leftArrow.setFormat(Paths.font("vcr.ttf"), 50, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
         nameGroup.add(leftArrow);
@@ -153,6 +169,13 @@ class CharacterProfiles extends MusicBeatState
         blackScreen.alpha = 0;
         add(blackScreen);
 
+        // ปุ่มย้อนกลับที่แตะได้จริง (เดิมมีแค่ controls.BACK ที่พึ่งปุ่มจริง)
+        btnBackTouch = new FlxSprite(20, 20).makeGraphic(90, 50, 0xAA000000);
+        add(btnBackTouch);
+        tBackTouch = new FlxText(20, 20, 90, "< BACK", 18);
+        tBackTouch.setFormat(Paths.font("vcr.ttf"), 18, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
+        add(tBackTouch);
+
         changeSelection();
         super.create();
     }
@@ -163,8 +186,39 @@ class CharacterProfiles extends MusicBeatState
             if (controls.UI_LEFT_P) changeSelection(-1);
             if (controls.UI_RIGHT_P) changeSelection(1);
 
+            // ----- Mouse / Touch: ปุ่มลูกศรเปลี่ยนตัวละคร (เดิมวาดไว้เฉยๆ ไม่มี logic) -----
+            updateArrowTouch(leftArrow, -1);
+            updateArrowTouch(rightArrow, 1);
+
+            // ----- Mouse / Touch: แตะ switchHint เพื่อสลับโหมดลับ (แทนปุ่ม TAB บนคีย์บอร์ด) -----
+            if (FlxG.mouse.overlaps(switchHint)) {
+                switchHint.scale.set(1.05, 1.05);
+                if (FlxG.mouse.justPressed) toggleSecret();
+            } else {
+                switchHint.scale.set(1.0, 1.0);
+            }
+
+            // ----- เมาส์วีล (desktop) -----
             if (FlxG.mouse.wheel != 0) {
                 bioText.y += FlxG.mouse.wheel * 45;
+                updateBioClip();
+            }
+
+            // ----- ลากนิ้วเลื่อนอ่าน bio (touch drag) -----
+            var overBio:Bool = FlxG.mouse.overlaps(bioText) || (FlxG.mouse.x > ldiAnim.x + bioOffsetX - 20 && FlxG.mouse.x < ldiAnim.x + bioOffsetX + 350
+                && FlxG.mouse.y > ldiAnim.y + bioOffsetY - 20 && FlxG.mouse.y < ldiAnim.y + bioOffsetY + 540);
+
+            if (FlxG.mouse.justPressed && overBio) {
+                isDraggingBio = true;
+                dragStartY = FlxG.mouse.y;
+                bioStartY = bioText.y;
+            }
+            if (FlxG.mouse.justReleased) {
+                isDraggingBio = false;
+            }
+            if (isDraggingBio) {
+                var deltaY:Float = FlxG.mouse.y - dragStartY;
+                bioText.y = bioStartY + deltaY;
                 updateBioClip();
             }
             
@@ -176,12 +230,33 @@ class CharacterProfiles extends MusicBeatState
             if (FlxG.keys.justPressed.TAB) toggleSecret();
         }
 
+        // ----- ปุ่มย้อนกลับที่แตะได้ -----
+        if (FlxG.mouse.overlaps(btnBackTouch)) {
+            btnBackTouch.alpha = 0.7;
+            if (FlxG.mouse.justPressed) goBackToMenu();
+        } else {
+            btnBackTouch.alpha = 1.0;
+        }
+
         if (controls.BACK) {
-            FlxG.sound.play(Paths.sound('cancelMenu'));
-            MusicBeatState.switchState(new MainMenuState());
+            goBackToMenu();
         }
 
         super.update(elapsed);
+    }
+
+    function goBackToMenu() {
+        FlxG.sound.play(Paths.sound('cancelMenu'));
+        MusicBeatState.switchState(new MainMenuState());
+    }
+
+    function updateArrowTouch(arrow:FlxText, direction:Int) {
+        if (FlxG.mouse.overlaps(arrow)) {
+            arrow.scale.set(1.3, 1.3);
+            if (FlxG.mouse.justPressed) changeSelection(direction);
+        } else {
+            arrow.scale.set(1.0, 1.0);
+        }
     }
 
     function updateBioClip() {
