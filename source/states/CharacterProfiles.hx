@@ -452,9 +452,11 @@ class CharacterProfiles extends MusicBeatState
         var targetArrow = (change > 0) ? rightArrow : leftArrow;
         if (change != 0) {
             targetArrow.scale.set(1.4, 1.4);
-            // แก้บั๊ก: ห้าม tween sprite.scale ตรงๆ เพราะเป็น pooled FlxPoint (สาเหตุของ "property x is not numeric")
-            // ต้อง tween ตัว sprite เองผ่าน property path "scale.x"/"scale.y" แทน
-            FlxTween.tween(targetArrow, {"scale.x": 1, "scale.y": 1}, 0.2);
+            // แก้บั๊ก "property x is not numeric": ห้าม tween sprite ทั้งตัวด้วย string path "scale.x"
+            // (VarTween resolve string path นี้เป็นตัวเลขไม่ได้ในเอนจิ้นนี้) ต้อง tween ตัว object
+            // FlxPoint (targetArrow.scale) ตรงๆ แทน ซึ่ง x/y ของมันเป็น field ตัวเลขจริง ไม่ใช่ string path
+            FlxTween.cancelTweensOf(targetArrow.scale);
+            FlxTween.tween(targetArrow.scale, {x: 1, y: 1}, 0.2);
         }
     }
 
