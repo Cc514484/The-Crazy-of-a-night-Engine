@@ -9,6 +9,8 @@ import options.OptionsState;
 import flixel.FlxSprite;
 import flixel.FlxG;
 import flixel.util.FlxColor;
+import openfl.ui.Multitouch;
+import openfl.ui.MultitouchInputMode;
 
 class MainMenuState extends MusicBeatState
 {
@@ -24,7 +26,6 @@ class MainMenuState extends MusicBeatState
 
 	public var bg:FlxSprite;
 	public var magenta:FlxSprite;
-
 	var stickerSubState:Bool;
 
 	public function new(?stickers:Bool = false)
@@ -35,6 +36,20 @@ class MainMenuState extends MusicBeatState
 
 	override function create()
 	{
+		// ทำให้ touch จำลองเป็น mouse event ได้ด้วย
+		// วิธีนี้ทำให้ UI ที่ผูกกับ FlxG.mouse (เช่น DesktopMenuState)
+		// ตอบสนองต่อการแตะหน้าจอได้เต็มรูปแบบ พร้อมกับยังใช้เมาส์จริงได้ปกติ
+		Multitouch.inputMode = MultitouchInputMode.NONE;
+
+		// เปิดใช้เมาส์เสมอ ไม่ว่าจะเป็นแพลตฟอร์มไหน
+		FlxG.mouse.enabled = true;
+		#if desktop
+		FlxG.mouse.visible = true;
+		#else
+		// บนมือถือซ่อน cursor ไว้ (นิ้วแตะไม่ต้องมี cursor โผล่)
+		FlxG.mouse.visible = false;
+		#end
+
 		if(stickerSubState) ModsHelper.clearStoredWithoutStickers();
 		else CacheSystem.clearStoredMemory();
 		CacheSystem.clearUnusedMemory();
@@ -45,14 +60,11 @@ class MainMenuState extends MusicBeatState
 		#end
 		
 		ModsHelper.resetActiveMods();
-
 		#if DISCORD_ALLOWED
 		// อัปเดต Discord Rich Presence
 		DiscordClient.changePresence("In the Menus", null);
 		#end
-
 		persistentUpdate = persistentDraw = true;
-
 		// แก้ไข: ใช้รูปภาพพื้นหลังจาก shared\images\Menu
 		bg = new FlxSprite(-80).loadGraphic(Paths.image('Menu/crBG', 'shared'));
 		bg.antialiasing = VsliceOptions.ANTIALIASING;
@@ -60,7 +72,6 @@ class MainMenuState extends MusicBeatState
 		bg.updateHitbox();
 		bg.screenCenter();
 		add(bg);
-
 		magenta = new FlxSprite(-80).loadGraphic(Paths.image('Menu/menuDesat', 'shared'));
 		magenta.antialiasing = VsliceOptions.ANTIALIASING;
 		magenta.setGraphicSize(Std.int(magenta.width * 1.175));
@@ -69,27 +80,20 @@ class MainMenuState extends MusicBeatState
 		magenta.visible = false;
 		magenta.color = 0xFFfd719b;
 		add(magenta);
-
 		// ส่วนของ psychVer, mowVer, crazyVer, fnfVer ถูกลบออกเพื่อให้ไปขึ้นที่ DesktopMenuState แทน
-
 		#if ACHIEVEMENTS_ALLOWED
 		// ปลดล็อกความสำเร็จ "Freaky on a Friday Night" หากเป็นวันศุกร์เวลา 18:00 น. ถึง 23:59 น.
 		var leDate = Date.now();
 		if (leDate.getDay() == 5 && leDate.getHours() >= 18)
 			MainMenuHooks.unlockFriday();
-
 		#if MODS_ALLOWED
 		MainMenuHooks.reloadAchievements();
 		#end
 		#end
-
 		super.create();
 		
-		#if TOUCH_CONTROLS_ALLOWED
-		if (controls.mobileC)
-			new mobile.states.MobileMenuState(this);
-		else
-		#end
+		// ใช้ DesktopMenuState เสมอ เพราะรองรับทั้ง mouse และ touch (ผ่าน Multitouch.inputMode = NONE ด้านบน)
+		// ไม่ต้องแยก MobileMenuState/DesktopMenuState ตาม controls.mobileC อีกต่อไป
 		new DesktopMenuState(this);
 	}
 
