@@ -659,9 +659,26 @@ class JukeboxState extends MusicBeatState
 		#end
 	}
 
+	// รายชื่อไฟล์ทั้งหมดที่ embed จริงในเกม (ทุกชนิด) แคชไว้ครั้งเดียวเพราะ Assets.list() ค่อนข้างหนัก
+	static var _allEmbeddedAssetPaths:Array<String> = null;
+	function getAllEmbeddedAssetPaths():Array<String> {
+		if (_allEmbeddedAssetPaths == null) {
+			try {
+				_allEmbeddedAssetPaths = Assets.list();
+			} catch (e:Dynamic) {
+				_allEmbeddedAssetPaths = [];
+			}
+			if (_allEmbeddedAssetPaths == null) _allEmbeddedAssetPaths = [];
+		}
+		return _allEmbeddedAssetPaths;
+	}
+
 	// ===== หัวใจของการแก้บั๊ก =====
-	// ลองทุก "การผสมกัน" ของ case ชื่อโฟลเดอร์ (เพลง) + case ชื่อไฟล์ เพราะ Assets.exists() บน
+	// ลองทุก "การผสมกัน" ของ case ชื่อโฟลเดอร์ (เพลง) + case ชื่อไฟล์ ก่อน (เร็ว) เพราะ Assets.exists() บน
 	// Android เป็น case-sensitive แบบเป๊ะๆ ต่างจาก sys.FileSystem บน desktop
+	// ถ้าเดาไม่ถูกสักอันเลย (เช่น Android build บีบ/แปลง case แบบที่เดาไม่ถึง) จะ fallback ไปสแกนรายชื่อ
+	// ไฟล์ที่ embed จริงทั้งหมดแล้วเทียบชื่อโฟลเดอร์+ไฟล์แบบไม่สนตัวพิมพ์ ซึ่งชัวร์ 100% เพราะเทียบกับ
+	// ของจริงที่อยู่ในเกม ไม่ใช่การเดา
 	function resolveMobileAsset(originalFolder:String, songName:String, fileName:String):String {
 		var basePath:String = "assets/songs/";
 		var folderVariants:Array<String> = [];
@@ -685,6 +702,24 @@ class JukeboxState extends MusicBeatState
 				if (Assets.exists(candidate)) {
 					return candidate;
 				}
+			}
+		}
+
+		// ===== fallback: สแกนไฟล์ที่ embed จริงทั้งหมด เทียบชื่อโฟลเดอร์+ไฟล์แบบไม่สนตัวพิมพ์ =====
+		var wantFile:String = fileName.toLowerCase();
+		var wantFolder:String = songName.toLowerCase();
+		for (path in getAllEmbeddedAssetPaths()) {
+			var lowerPath = path.toLowerCase();
+			if (lowerPath.indexOf("songs/") < 0) continue;
+
+			var parts = path.split("/");
+			if (parts.length < 2) continue;
+
+			var pFile = parts[parts.length - 1].toLowerCase();
+			var pFolder = parts[parts.length - 2].toLowerCase();
+
+			if (pFile == wantFile && pFolder == wantFolder) {
+				return path;
 			}
 		}
 
