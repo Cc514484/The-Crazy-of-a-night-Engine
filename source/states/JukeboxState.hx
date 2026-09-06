@@ -63,7 +63,7 @@ class JukeboxState extends MusicBeatState
 	var loadingBarBG:FlxSprite;
 	var loadingBar:FlxSprite;  
 
-	// UI Buttons (ขนาด 50x50 px)
+	// UI Buttons
 	var leftArrow:FlxText;
 	var rightArrow:FlxText;
 	var btnMuteInst:FlxSprite;
@@ -74,7 +74,6 @@ class JukeboxState extends MusicBeatState
 	var btnForward5:FlxSprite;
 	var tPlayPause:FlxText;
 
-	// ปุ่มย้อนกลับสำหรับหน้าจอสัมผัส (Touch Screen Exit Button)
 	var btnBackTouch:FlxSprite;
 	var tBackTouch:FlxText;
 
@@ -83,7 +82,7 @@ class JukeboxState extends MusicBeatState
 	var vocalsPlayer:FlxSound;
 	var vocalsOpponent:FlxSound;
 
-	// Global Preload Containers (RAM Cache)
+	// Preload
 	public static var preloadedInst:Map<String, Sound> = new Map();
 	public static var preloadedVP:Map<String, Sound> = new Map();
 	public static var preloadedVO:Map<String, Sound> = new Map();
@@ -92,7 +91,6 @@ class JukeboxState extends MusicBeatState
 	var loadTasks:Array<LoadTask> = [];
 	var currentTaskIndex:Int = 0;
 
-	// States
 	var isLoading:Bool = true;
 	var isScrubbing:Bool = false;
 	var isMuted:Bool = false;
@@ -100,7 +98,6 @@ class JukeboxState extends MusicBeatState
 	var isPaused:Bool = false;
 	var songSpeed:Float = 1.0;
 
-	// แสดงข้อความดีบักบนจอ
 	var debugText:FlxText;
 
 	override function create()
@@ -111,19 +108,16 @@ class JukeboxState extends MusicBeatState
 		DiscordClient.changePresence("Jukebox - Listening to Music", null);
 		#end
 
-		// ปิดเสียงเพลงของ Main Menu ที่อาจจะเล่นค้างอยู่เพื่อไม่ให้ซ้อนกัน
 		if (FlxG.sound.music != null && FlxG.sound.music.playing) {
 			FlxG.sound.music.stop();
 		}
 
-		// เปิดโหมด Touch Point เพื่อให้จอมือถือแตะติด 100%
 		#if FLX_TOUCH
 		Multitouch.inputMode = MultitouchInputMode.TOUCH_POINT;
 		#end
 
 		FlxG.mouse.visible = true;
 
-		// ช่องเสียงเพลงหลัก
 		instSound = new FlxSound();
 		FlxG.sound.list.add(instSound);
 
@@ -140,7 +134,7 @@ class JukeboxState extends MusicBeatState
 		bg.screenCenter();
 		add(bg);
 
-		// สแกนรายชื่อเพลงจากโฟลเดอร์ MODS
+		// สแกนและเรียงเพลงตาม Week
 		scanSongsFromMods();
 
 		albumText = new FlxText(0, 40, FlxG.width, "ALBUM: NONE", 32);
@@ -210,8 +204,6 @@ class JukeboxState extends MusicBeatState
 
 		speedText = new FlxText(120, 630, 100, "1.0x", 28).setFormat(Paths.font("vcr.ttf"), 28, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(speedText);
-		var speedGuide:FlxText = new FlxText(120, 665, 120, "SPEED [↑/↓]", 12).setFormat(Paths.font("vcr.ttf"), 12, FlxColor.YELLOW, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-		add(speedGuide);
 
 		timeText = new FlxText(FlxG.width - 200, 630, 150, "0:00 / 0:00", 24).setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, RIGHT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(timeText);
@@ -228,7 +220,6 @@ class JukeboxState extends MusicBeatState
 		controlGuide.setFormat(Paths.font("vcr.ttf"), 12, FlxColor.YELLOW, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(controlGuide);
 
-		// ปุ่ม EXIT สำหรับหน้าจอสัมผัส
 		btnBackTouch = new FlxSprite(FlxG.width - 130, 20).makeGraphic(110, 42, 0xFF1E1E24);
 		btnBackTouch.alpha = 0.85;
 		add(btnBackTouch);
@@ -241,12 +232,11 @@ class JukeboxState extends MusicBeatState
 		debugText.setFormat(Paths.font("vcr.ttf"), 14, FlxColor.RED, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(debugText);
 
-		// หน้าจอ Loading
 		loadingBG = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
 		loadingBG.alpha = 0.95; 
 		add(loadingBG);
 
-		loadingText = new FlxText(0, 300, FlxG.width, "SCANNING & PRELOADING SONGS FROM MODS...", 24);
+		loadingText = new FlxText(0, 300, FlxG.width, "SCANNING & PRELOADING SONGS...", 24);
 		loadingText.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		add(loadingText);
 
@@ -268,16 +258,17 @@ class JukeboxState extends MusicBeatState
 	{
 		songsList = [];
 		songsFolderList = [];
-		var directories:Map<String, String> = new Map();
+		var availableSongs:Map<String, String> = new Map();
 
+		// 1. สแกนหาเพลงทั้งหมดก่อน (ทั้งโฟลเดอร์หลัก และโฟลเดอร์ Mod)
 		#if sys
-		var rootCandidates:Array<String> = ["mods/songs/", "mods/song/"];
+		var rootCandidates:Array<String> = ["assets/songs/", "assets/shared/songs/", "mods/songs/", "mods/song/"];
 		for (rc in rootCandidates) {
 			if (FileSystem.exists(rc) && FileSystem.isDirectory(rc)) {
 				for (folder in FileSystem.readDirectory(rc)) {
 					var fullPath = rc + folder + "/";
 					if (FileSystem.isDirectory(fullPath)) {
-						directories.set(folder.toLowerCase(), fullPath);
+						availableSongs.set(folder.toLowerCase(), fullPath);
 					}
 				}
 			}
@@ -295,7 +286,7 @@ class JukeboxState extends MusicBeatState
 							for (folder in FileSystem.readDirectory(songsPath)) {
 								var fullPath = songsPath + folder + "/";
 								if (FileSystem.isDirectory(fullPath)) {
-									directories.set(folder.toLowerCase(), fullPath);
+									availableSongs.set(folder.toLowerCase(), fullPath);
 								}
 							}
 						}
@@ -303,30 +294,41 @@ class JukeboxState extends MusicBeatState
 				}
 			}
 		}
+		#end
 
-		try {
-			var androidCandidatePaths = [
-				Paths.mods('songs/'),
-				Paths.mods('song/')
-			];
-			for (androidPath in androidCandidatePaths) {
-				if (androidPath != null && FileSystem.exists(androidPath) && FileSystem.isDirectory(androidPath)) {
-					for (folder in FileSystem.readDirectory(androidPath)) {
-						var fullPath = androidPath + folder + "/";
-						if (FileSystem.isDirectory(fullPath)) {
-							directories.set(folder.toLowerCase(), fullPath);
+		// 2. เรียงเพลงตาม Week (โหลดข้อมูล Week ทั้งหมด)
+		WeekData.reloadWeekFiles(false);
+		
+		if (WeekData.weeksList != null && WeekData.weeksList.length > 0) {
+			for (weekName in WeekData.weeksList) {
+				var week = WeekData.weeksLoaded.get(weekName);
+				if (week != null && week.songs != null) {
+					for (songData in week.songs) {
+						var sName:String = Std.string(songData[0]).toLowerCase();
+						// ถ้ามีเพลงนั้นในเครื่อง ให้จับเข้าลิสต์ทันที
+						if (availableSongs.exists(sName)) {
+							songsList.push(sName);
+							songsFolderList.push(availableSongs.get(sName));
+							availableSongs.remove(sName); // เอาออกเพื่อไม่ให้ซ้ำ
 						}
 					}
 				}
 			}
-		} catch(e:Dynamic) {}
-		#end
-
-		for (songKey in directories.keys()) {
-			songsList.push(songKey);
-			songsFolderList.push(directories.get(songKey));
 		}
 
+		// 3. นำเพลงที่เหลือ (เพลงลับ / ไม่ได้อยู่ใน Week ใดๆ) มาเรียงตามอักษรและต่อท้าย
+		var leftoverSongs:Array<String> = [];
+		for (songKey in availableSongs.keys()) {
+			leftoverSongs.push(songKey);
+		}
+		leftoverSongs.sort(function(a, b) return (a < b) ? -1 : (a > b) ? 1 : 0);
+		
+		for (songKey in leftoverSongs) {
+			songsList.push(songKey);
+			songsFolderList.push(availableSongs.get(songKey));
+		}
+
+		// เผื่อหาเพลงไม่เจอเลย ป้องกันเกมค้าง
 		if (songsList.length == 0) {
 			songsList.push("test");
 			songsFolderList.push("mods/songs/test/");
@@ -424,7 +426,7 @@ class JukeboxState extends MusicBeatState
 		loadingBar.visible = false;
 
 		if (preloadedInst.keys().hasNext() == false) {
-			debugText.text = "WARNING: No audio found in mods/. Songs detected: " + songsList.length;
+			debugText.text = "WARNING: No audio found! Songs detected: " + songsList.length;
 		}
 		
 		if (songsList.length > 0) {
@@ -438,7 +440,6 @@ class JukeboxState extends MusicBeatState
 
 		if (isLoading) return;
 
-		// คีย์บอร์ด
 		if (controls.UI_LEFT_P || FlxG.keys.justPressed.LEFT) changeSong(-1);
 		if (controls.UI_RIGHT_P || FlxG.keys.justPressed.RIGHT) changeSong(1);
 
@@ -452,7 +453,6 @@ class JukeboxState extends MusicBeatState
 		if (FlxG.keys.justPressed.UP) adjustSpeed(0.1);
 		if (FlxG.keys.justPressed.DOWN) adjustSpeed(-0.1);
 
-		// ตรวจจับการกดปุ่ม (เมาส์ + ทัชสกรีน) พร้อมเอฟเฟกต์กะพริบสี
 		updateButtonLogic(leftArrow, function() { changeSong(-1); });
 		updateButtonLogic(rightArrow, function() { changeSong(1); });
 		updateButtonLogic(btnMuteInst, toggleMuteInst);
@@ -462,9 +462,8 @@ class JukeboxState extends MusicBeatState
 		updateButtonLogic(btnPlayPause, togglePlayPause);
 		updateButtonLogic(btnForward5, function() { skipTime(5000); });
 		updateButtonLogic(btnBackTouch, function() { goBackToMenu(); });
-		updateButtonLogic(tBackTouch, function() { goBackToMenu(); }); // ให้กดที่ตัวอักษร EXIT ได้ด้วย
+		updateButtonLogic(tBackTouch, function() { goBackToMenu(); }); 
 
-		// ระบบลากแถบเวลา (รองรับทั้งเมาส์และทัช)
 		if (instSound != null && instSound.length > 0) {
 			
 			var inputJustPressed = FlxG.mouse.justPressed;
@@ -532,7 +531,11 @@ class JukeboxState extends MusicBeatState
 		Multitouch.inputMode = MultitouchInputMode.NONE;
 		#end
 		
-		// กลับไปหน้า Main Menu โดยให้มันจัดการเล่นเพลงเมนูขึ้นมาใหม่เอง
+		// เปิดเสียงเพลงเมนูหลักให้กลับมาเล่น
+		if (FlxG.sound.music == null || !FlxG.sound.music.playing) {
+			FlxG.sound.playMusic(Paths.music('freakyMenu'));
+		}
+
 		MusicBeatState.switchState(new mikolka.vslice.ui.MainMenuState());
 	}
 
@@ -584,7 +587,6 @@ class JukeboxState extends MusicBeatState
 		artistText.text = "BY: " + artist.toUpperCase();
 		albumText.text = "ALBUM: " + album.toUpperCase();
 
-		// รีเซ็ตปุ่ม Play/Pause เป็นสถานะ "เล่นอยู่" (สีขาว)
 		isPaused = false;
 		btnPlayPause.loadGraphic(Paths.image('JukeboxUI/stop'));
 		btnPlayPause.color = FlxColor.WHITE; 
@@ -649,7 +651,6 @@ class JukeboxState extends MusicBeatState
 			}
 		}
 
-		// รักษาอัตราส่วนภาพปกอัลบั้ม
 		albumArt.scale.set(1, 1);
 		albumArt.updateHitbox();
 		
@@ -700,14 +701,14 @@ class JukeboxState extends MusicBeatState
 			vocalsPlayer.pause();
 			vocalsOpponent.pause();
 			btnPlayPause.loadGraphic(Paths.image('JukeboxUI/play'));
-			btnPlayPause.color = FlxColor.RED; // หยุดเพลงเปลี่ยนปุ่มเป็นสีแดง
+			btnPlayPause.color = FlxColor.RED;
 			tPlayPause.text = "PLAY\n[SPACE]";
 		} else {
 			instSound.resume();
 			vocalsPlayer.resume();
 			vocalsOpponent.resume();
 			btnPlayPause.loadGraphic(Paths.image('JukeboxUI/stop'));
-			btnPlayPause.color = FlxColor.WHITE; // เล่นเพลงกลับมาเป็นสีขาว
+			btnPlayPause.color = FlxColor.WHITE; 
 			tPlayPause.text = "PAUSE\n[SPACE]";
 		}
 		btnPlayPause.setGraphicSize(50, 50);
@@ -781,7 +782,6 @@ class JukeboxState extends MusicBeatState
 		return "";
 	}
 
-	// ฟังก์ชันจัดการคลิก/ทัช พร้อมเพิ่มลูกเล่นกระพริบสีเวลากด
 	function updateButtonLogic(obj:flixel.FlxObject, onClick:Void->Void)
 	{
 		if (obj == null || !obj.visible) return;
@@ -789,7 +789,6 @@ class JukeboxState extends MusicBeatState
 		var pad:Float = 15.0;
 		var isClicked = false;
 
-		// ตรวจสอบเมาส์ PC
 		if (FlxG.mouse.justPressed) {
 			if (FlxG.mouse.x >= obj.x - pad && FlxG.mouse.x <= obj.x + obj.width + pad &&
 				FlxG.mouse.y >= obj.y - pad && FlxG.mouse.y <= obj.y + obj.height + pad) {
@@ -797,7 +796,6 @@ class JukeboxState extends MusicBeatState
 			}
 		}
 
-		// ตรวจสอบหน้าจอสัมผัส
 		#if FLX_TOUCH
 		for (touch in FlxG.touches.justStarted()) {
 			if (touch.x >= obj.x - pad && touch.x <= obj.x + obj.width + pad &&
@@ -810,13 +808,11 @@ class JukeboxState extends MusicBeatState
 		if (isClicked) {
 			FlxG.sound.play(Paths.sound('scrollMenu'));
 			
-			// ถ้าเป็น FlxText (ปุ่มตัวอักษร) ให้กะพริบเป็นสีเหลืองชั่วคราว
 			if (Std.isOfType(obj, FlxText)) {
 				var txt = cast(obj, FlxText);
 				txt.color = FlxColor.YELLOW;
 				new FlxTimer().start(0.1, function(tmr:FlxTimer) { txt.color = FlxColor.WHITE; });
 			}
-			// ถ้าเป็น FlxSprite (ปุ่มไอคอน) และไม่ใช่ปุ่มที่มีสถานะเปิด/ปิด (Mute/Play) ให้กะพริบเป็นสีเทา
 			else if (Std.isOfType(obj, FlxSprite)) {
 				var spr = cast(obj, FlxSprite);
 				if (spr != btnMuteInst && spr != btnMuteVocals && spr != btnPlayPause) {
