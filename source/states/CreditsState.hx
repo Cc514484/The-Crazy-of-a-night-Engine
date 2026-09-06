@@ -1,7 +1,5 @@
 package states;
 
-import objects.Alphabet;
-import objects.AttachedSprite;
 import flixel.util.FlxColor;
 import flixel.tweens.FlxTween;
 import flixel.tweens.FlxEase;
@@ -20,15 +18,11 @@ class CreditsState extends MusicBeatState
     var video:FlxVideoSprite;
     var isVideoPlaying:Bool = false;
     
-    var creditTitle:Alphabet;
-    var creditName:Alphabet;
-    var creditIcon:AttachedSprite;
-    var creditDesc:FlxText;
     var bg:FlxSprite;
 
     var skipBar:FlxBar;
     public var skipTime:Float = 0;
-    var maxSkipTime:Float = 1.0; // 1. ตั้งเวลา 3 วิ
+    var maxSkipTime:Float = 1.0; // ตั้งเวลาข้าม 1 วิ (ตามโค้ดเดิมของคุณ)
     var skipText:FlxText;
     var skipTween:FlxTween; 
 
@@ -60,10 +54,12 @@ class CreditsState extends MusicBeatState
 
         var finalPath:String = "assets/shared/videos/creditsVideo.mp4"; 
         if (!FileSystem.exists(finalPath)) finalPath = "assets/shared/videos/creditsVideo.mp4";
+        
         if (FileSystem.exists(finalPath)) {
             playCreditsVideo(finalPath);
         } else {
-            startFinalSequence();
+            // ถ้าไม่มีไฟล์วิดีโอ ให้ออกไปหน้าเมนูเลย
+            exitCredits();
         }
 
         super.create();
@@ -99,7 +95,7 @@ class CreditsState extends MusicBeatState
                 skipBar.alpha = 1;
                 skipText.alpha = 1;
             } else if (skipBar.visible) {
-                // 2. อนิเมชั่นไหลกลับแบบเร็ว
+                // อนิเมชั่นไหลกลับแบบเร็ว
                 if (skipTween != null) skipTween.cancel();
                 skipTween = FlxTween.tween(this, {skipTime: 0}, 0.5, {
                     ease: FlxEase.expoOut,
@@ -139,92 +135,14 @@ class CreditsState extends MusicBeatState
         skipBar.visible = false;
         skipText.visible = false;
         skipTime = 0;
-        startFinalSequence();
-    }
-
-    function startFinalSequence()
-    {
-        // แก้ไขให้เหลือแค่ Yasa และเปลี่ยนคำอธิบาย
-        var sequence = [
-            {title: "Engine Developer", name: "Yasa", icon: "yasa", desc: "Made Engine for The Crazy of a night\n(Made from Mow Engine)"}
-        ];
-        showNextCredit(sequence, 0);
-    }
-
-    function showNextCredit(data:Array<Dynamic>, index:Int)
-    {
-        if (index >= data.length) {
-            exitCredits();
-            return;
-        }
-
-        var current = data[index];
         
-        // --- Discord Update ---
-        #if DISCORD_ALLOWED
-        DiscordClient.changePresence("Viewing Credits", "Reading about: " + current.name, null, true);
-        #end
-        
-        creditTitle = new Alphabet(0, 0, current.title, true);
-        creditTitle.screenCenter(X);
-        creditTitle.y = FlxG.height * 0.25;
-        creditTitle.alpha = 0;
-        add(creditTitle);
-
-        creditName = new Alphabet(0, 0, current.name, false);
-        creditName.screenCenter();
-        creditName.alpha = 0;
-        add(creditName);
-
-        var iconPath:String = 'credits/' + current.icon;
-        if (!Paths.fileExists('images/$iconPath.png', IMAGE)) iconPath = 'credits/missing_icon';
-        
-        creditIcon = new AttachedSprite(iconPath);
-        // 3. แก้ไอคอนบัค: จัดการตำแหน่งใหม่ให้แน่นอน
-        creditIcon.sprTracker = creditName;
-        creditIcon.xAdd = creditName.width + 30;
-        // ระยะห่างหลังชื่อ
-        creditIcon.yAdd = -10; 
-        creditIcon.alpha = 0;
-        if (creditIcon.animation.curAnim != null) {
-            creditIcon.animation.curAnim.curFrame = 0;
-            creditIcon.animation.pause();
-        }
-        add(creditIcon);
-
-        creditDesc = new FlxText(0, 0, FlxG.width, current.desc, 32);
-        // แก้ไขฟอนต์ของคำอธิบายเป็น bro.ttf เพื่อกันตัวหนังสือหาย
-        creditDesc.setFormat(Paths.font("bro.ttf"), 32, FlxColor.WHITE, CENTER, OUTLINE, FlxColor.BLACK);
-        creditDesc.screenCenter(X);
-        creditDesc.y = FlxG.height * 0.7;
-        creditDesc.alpha = 0;
-        add(creditDesc);
-
-        FlxTween.tween(creditTitle, {alpha: 1}, 0.5);
-        FlxTween.tween(creditName, {alpha: 1}, 0.5, {startDelay: 0.2});
-        FlxTween.tween(creditIcon, {alpha: 1}, 0.5, {startDelay: 0.2});
-        FlxTween.tween(creditDesc, {alpha: 1}, 0.5, {startDelay: 0.4, onComplete: function(twn:FlxTween) {
-            
-            new FlxTimer().start(2.5, function(tmr:FlxTimer) {
-                FlxTween.tween(creditTitle, {alpha: 0}, 0.5);
-                FlxTween.tween(creditName, {alpha: 0}, 0.5);
-                FlxTween.tween(creditIcon, {alpha: 0}, 0.5);
-        
-                FlxTween.tween(creditDesc, {alpha: 0}, 0.5, {onComplete: function(twn:FlxTween) {
-                    creditTitle.destroy();
-                    creditName.destroy();
-                    creditIcon.destroy();
-                    creditDesc.destroy();
-      
-                    showNextCredit(data, index + 1);
-                }});
-            });
-        }});
+        // เรียกใช้ออกเกมกลับเมนูทันทีโดยไม่ต้องโชว์ข้อความเครดิต
+        exitCredits();
     }
 
     function exitCredits()
     {
-        // 4. เพลงกลับมาเล่นเฉพาะตอนออกจากหน้านี้
+        // เพลงกลับมาเล่นเฉพาะตอนออกจากหน้านี้
         if (FlxG.sound.music == null || !FlxG.sound.music.playing) {
             FlxG.sound.playMusic(Paths.music('freakyMenu'), 0.7);
         }
