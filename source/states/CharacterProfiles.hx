@@ -23,7 +23,12 @@ import sys.FileSystem;
 import sys.io.File;
 import openfl.display.BitmapData;
 import flixel.graphics.FlxGraphic;
-import backend.Mods; // เรียกใช้คลาสจัดการระบบม็อดของ Engine
+import backend.Mods;
+
+// เพิ่มการเรียกใช้ StorageUtil สำหรับมือถือ
+#if mobile
+import mobile.backend.StorageUtil;
+#end
 
 typedef SingleCharJson = {
     var name:String;
@@ -265,13 +270,19 @@ class CharacterProfiles extends MusicBeatState
         secretList = defaultSecretList.copy();
         secretBios = defaultSecretBios.copy();
 
+        // ตรวจสอบและดึง path ฐานของมือถือ (ถ้าเป็น PC จะเป็นค่าว่าง)
+        var baseDir:String = "";
+        #if mobile
+        baseDir = StorageUtil.getStorageDirectory();
+        #end
+
         var pathsToSearch:Array<String> = [];
 
         if (Mods.currentModDirectory != null && Mods.currentModDirectory != "") {
-            pathsToSearch.push("mods/" + Mods.currentModDirectory + "/CharacterProfiles/");
+            pathsToSearch.push(baseDir + "mods/" + Mods.currentModDirectory + "/CharacterProfiles/");
         }
         
-        pathsToSearch.push("mods/CharacterProfiles/");
+        pathsToSearch.push(baseDir + "mods/CharacterProfiles/");
 
         var targetDir:String = "";
         for (path in pathsToSearch) {
@@ -281,9 +292,9 @@ class CharacterProfiles extends MusicBeatState
             }
         }
 
-        if (targetDir == "" && FileSystem.exists("mods/") && FileSystem.isDirectory("mods/")) {
-            for (dir in FileSystem.readDirectory("mods/")) {
-                var checkPath = "mods/" + dir + "/CharacterProfiles/";
+        if (targetDir == "" && FileSystem.exists(baseDir + "mods/") && FileSystem.isDirectory(baseDir + "mods/")) {
+            for (dir in FileSystem.readDirectory(baseDir + "mods/")) {
+                var checkPath = baseDir + "mods/" + dir + "/CharacterProfiles/";
                 if (FileSystem.exists(checkPath) && FileSystem.isDirectory(checkPath)) {
                     targetDir = checkPath;
                     break;
@@ -336,7 +347,7 @@ class CharacterProfiles extends MusicBeatState
                 }
             }
         } else {
-            activeModPath = "mods/";
+            activeModPath = baseDir + "mods/";
             trace("No CharacterProfiles folder found in any mods. Using defaults.");
         }
     }
@@ -452,9 +463,6 @@ class CharacterProfiles extends MusicBeatState
         var targetArrow = (change > 0) ? rightArrow : leftArrow;
         if (change != 0) {
             targetArrow.scale.set(1.4, 1.4);
-            // แก้บั๊ก "property x is not numeric": ห้าม tween sprite ทั้งตัวด้วย string path "scale.x"
-            // (VarTween resolve string path นี้เป็นตัวเลขไม่ได้ในเอนจิ้นนี้) ต้อง tween ตัว object
-            // FlxPoint (targetArrow.scale) ตรงๆ แทน ซึ่ง x/y ของมันเป็น field ตัวเลขจริง ไม่ใช่ string path
             FlxTween.cancelTweensOf(targetArrow.scale);
             FlxTween.tween(targetArrow.scale, {x: 1, y: 1}, 0.2);
         }
@@ -501,7 +509,7 @@ class CharacterProfiles extends MusicBeatState
                 FlxTween.tween(ldiAnim, {x: 0}, 0.6, {ease: FlxEase.backOut});
                 FlxTween.tween(bioText, {alpha: 1}, 0.4);
                 FlxTween.tween(nameGroup, {alpha: 1, y: 580}, 0.5, {ease: FlxEase.backOut});
-           
+            
                 new FlxTimer().start(0.6, function(tmr:FlxTimer) {
                     isTransitioning = false;
                 });
